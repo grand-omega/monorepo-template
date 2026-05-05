@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::email::outbox::{self, EmailOutboxRow};
+use crate::email::outbox::{self, EmailKind, EmailOutboxRow};
 use crate::email::templates;
 use chrono::Utc;
 use tracing::{error, warn};
@@ -15,7 +15,15 @@ pub async fn send_verification(state: &AppState, to: &str, verify_url: &str) {
             return;
         }
     };
-    enqueue_and_try_send(state, to, "Verify your email", rendered.html, rendered.text).await;
+    enqueue_and_try_send(
+        state,
+        EmailKind::EmailVerification,
+        to,
+        "Verify your email",
+        rendered.html,
+        rendered.text,
+    )
+    .await;
 }
 
 pub async fn send_password_reset(state: &AppState, to: &str, reset_url: &str) {
@@ -28,6 +36,7 @@ pub async fn send_password_reset(state: &AppState, to: &str, reset_url: &str) {
     };
     enqueue_and_try_send(
         state,
+        EmailKind::PasswordReset,
         to,
         "Reset your password",
         rendered.html,
@@ -38,12 +47,13 @@ pub async fn send_password_reset(state: &AppState, to: &str, reset_url: &str) {
 
 async fn enqueue_and_try_send(
     state: &AppState,
+    kind: EmailKind,
     to: &str,
     subject: &str,
     html_body: String,
     text_body: String,
 ) {
-    let id = match outbox::enqueue(&state.db, to, subject, &html_body, &text_body).await {
+    let id = match outbox::enqueue(&state.db, kind, to, subject, &html_body, &text_body).await {
         Ok(id) => id,
         Err(e) => {
             error!(error = ?e, recipient = %to, subject, "failed to enqueue email");
@@ -101,6 +111,11 @@ async fn deliver_claimed(state: &AppState, row: EmailOutboxRow) -> anyhow::Resul
         }
         Err(e) => {
             let attempts = row.attempts + 1;
+            if row.is_auth_token_email() {
+                outbox::mark_failed_scrubbed(&state.db, row.id, attempts, &format!("{e:?}"))
+                    .await?;
+                return Err(e);
+            }
             let delay = retry_delay(attempts);
             outbox::mark_failed(
                 &state.db,
@@ -124,4 +139,14 @@ fn retry_delay(attempts: i32) -> chrono::Duration {
         _ => 6 * 60,
     };
     chrono::Duration::minutes(minutes)
+}
+
+pub async fn cleanup_retained_auth_token_emails(state: &AppState) -> crate::AppResult<u64> {
+    let now = Utc::now();
+    outbox::delete_retained_auth_token_emails(
+        &state.db,
+        now - chrono::Duration::days(7),
+        now - chrono::Duration::hours(24),
+    )
+    .await
 }

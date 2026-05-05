@@ -31,8 +31,9 @@ Required production decisions:
 - `APP_TRUSTED_PROXY_CIDRS` must match only the load balancer or ingress CIDRs.
 - `APP_METRICS_BIND_ADDR` should be reachable only from the metrics network.
 - `APP_ALLOW_NOOP_MAILER=false` is enforced in `prod`.
-- `APP_PUBLIC_BASE_URL` must be the public HTTPS API base URL used in
-  verification and password-reset emails.
+- `APP_PUBLIC_BASE_URL` must be the public HTTPS base URL used in verification
+  and password-reset emails. Auth tokens are placed in URL fragments so they
+  are not sent to backend, proxy, or ingress request logs.
 - `APP_ADMIN_UI_DIR` should point at the built admin SPA directory when the
   backend should serve `/admin/*`. The production Docker image copies it to
   `/app/admin-dist`.

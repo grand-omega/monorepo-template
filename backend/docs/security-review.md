@@ -15,7 +15,8 @@ cannot verify these controls from the repository alone.
 ## Browser And API Boundaries
 
 - `APP_CORS_ALLOWED_ORIGINS` contains exact production origins only.
-- `APP_PUBLIC_BASE_URL` is HTTPS and points at the public API origin.
+- `APP_PUBLIC_BASE_URL` is HTTPS and points at the public origin used for
+  verification and password-reset links.
 - Admin cookies are `Secure`, `HttpOnly` where appropriate, and `SameSite=Strict`.
 - State-changing admin API calls include `X-CSRF-Token`.
 - WebAuthn `APP_WEBAUTHN_RP_ORIGIN` exactly matches the admin SPA origin.

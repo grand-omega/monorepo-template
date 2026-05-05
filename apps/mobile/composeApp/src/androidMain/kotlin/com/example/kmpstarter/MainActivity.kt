@@ -29,12 +29,17 @@ class MainActivity : ComponentActivity() {
     private fun consumeIntent(intent: Intent?) {
         val data: Uri = intent?.data ?: return
         if (data.scheme != APP_SCHEME) return
-        val token = data.getQueryParameter("token") ?: return
+        val token = data.getQueryParameter("token") ?: data.fragmentToken() ?: return
         deepLink.value = when (data.host) {
             HOST_VERIFY -> DeepLinkAction.VerifyEmail(token)
             HOST_RESET -> DeepLinkAction.ResetPassword(token)
             else -> return
         }
+    }
+
+    private fun Uri.fragmentToken(): String? {
+        val fragment = fragment?.trimStart('?') ?: return null
+        return Uri.parse("kmpstarter://token?$fragment").getQueryParameter("token")
     }
 
     private companion object {

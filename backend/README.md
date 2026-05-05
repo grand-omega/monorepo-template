@@ -76,7 +76,7 @@ Verification emails land in MailHog at `http://localhost:8025`.
 
 In dev, verification/reset links are generated from `APP_PUBLIC_BASE_URL`, but
 there is no user-facing `/verify` or `/reset-password` page in this repository.
-Client apps should extract the `token` query parameter from the email link and
+Client apps should extract the `token` fragment parameter from the email link and
 call `/v1/auth/verify-email` or `/v1/auth/password-reset/confirm`.
 
 ### Management access
@@ -134,7 +134,7 @@ lost-passkey recovery flow yet.
 All settings come from `APP_*` environment variables. Copy `.env.example` to `.env.local` and fill in the gaps. Highlights:
 
 - `APP_ENV` — `dev` | `test` | `prod`. In `prod`, weak Argon2 parameters and missing JWT keys fail startup.
-- `APP_PUBLIC_BASE_URL` — used to build verification / reset links sent in email.
+- `APP_PUBLIC_BASE_URL` — used to build verification / reset links sent in email. Auth tokens are placed in URL fragments.
 - `APP_TRUSTED_PROXY_CIDRS` — comma-separated CIDRs allowed to set `X-Forwarded-For`. Leave empty if the app is internet-facing.
 - `APP_ALLOW_NOOP_MAILER` — set to `true` only in dev/test to allow startup if SMTP init fails. Otherwise startup is fatal, so verification emails are not silently dropped.
 - `APP_ARGON2_*` — defaults match OWASP minimums (`m=19456 t=2 p=1`); lower values are rejected in `prod`.

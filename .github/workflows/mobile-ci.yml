@@ -13,6 +13,9 @@ on:
       - "contracts/**"
       - ".github/workflows/mobile-ci.yml"
 
+permissions:
+  contents: read
+
 jobs:
   mobile:
     runs-on: ubuntu-latest
