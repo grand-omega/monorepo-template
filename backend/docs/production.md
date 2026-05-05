@@ -50,7 +50,7 @@ background worker every 30 seconds.
 
 Operational checks:
 
-- Alert on sustained `email_outbox_failed_total` growth.
+- Alert on sustained email delivery failures or a growing failed outbox count.
 - Inspect `email_outbox WHERE status IN ('pending', 'failed', 'sending')`.
 - A `sending` row older than 10 minutes is requeued automatically.
 - SMTP outages no longer lose messages, but users still wait for delivery until
@@ -58,16 +58,16 @@ Operational checks:
 
 ## Observability
 
-Scrape `/metrics` from the metrics bind address. Recommended dashboards:
+Use the deployment platform's logging, tracing, and health-check tooling.
+Recommended dashboards or monitors:
 
 - Request rate, 4xx/5xx rate, and p95/p99 latency by route.
 - `/readyz` failures.
 - DB pool usage and query error rate.
 - Redis rate-limit errors and blocked requests.
 - Login failures, account lockouts, refresh reuse detection.
-- Email delivery failures and pending outbox age.
-
-Example Prometheus alert rules live in `docs/prometheus-alerts.yml`.
+- Email delivery failures and pending outbox age. Query `email_outbox` for
+  pending/failed rows if the platform does not collect custom app events.
 
 ## JWT Keys
 

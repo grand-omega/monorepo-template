@@ -1,6 +1,6 @@
 # lab-rust-server
 
-A production-leaning authentication & user-management API in Rust (Axum 0.8) — registration, login, JWT (Ed25519) access tokens, refresh-token rotation with reuse detection, email verification, password reset, and account management. Backed by PostgreSQL (sqlx) and Redis (rate limiting), with Prometheus metrics, structured tracing, and an OpenAPI / Swagger UI.
+A production-leaning authentication & user-management API in Rust (Axum 0.8) — registration, login, JWT (Ed25519) access tokens, refresh-token rotation with reuse detection, email verification, password reset, and account management. Backed by PostgreSQL (sqlx) and Redis (rate limiting), with structured tracing and an OpenAPI / Swagger UI.
 
 > Status: foundation. Auth and identity are done; product-specific endpoints are not. Read this as a starter kit, not a finished service.
 
@@ -116,7 +116,7 @@ src/
   email/             SMTP mailer + Tera templates + DB-backed outbox/retry
   middleware/        bearer auth, Redis Lua rate limiter, request-id, security headers, trusted-proxy IP
   health/            /healthz and /readyz
-  telemetry/         tracing-subscriber + prometheus exporter
+  telemetry/         tracing-subscriber setup
   db/                sqlx pool + migration runner
   error.rs           AppError → HTTP status mapping with field-level validation errors
   openapi.rs         utoipa schema for Swagger UI

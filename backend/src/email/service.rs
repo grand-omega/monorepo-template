@@ -97,7 +97,6 @@ async fn deliver_claimed(state: &AppState, row: EmailOutboxRow) -> anyhow::Resul
     {
         Ok(()) => {
             outbox::mark_sent(&state.db, row.id).await?;
-            metrics::counter!("email_outbox_delivered_total").increment(1);
             Ok(())
         }
         Err(e) => {
@@ -111,7 +110,6 @@ async fn deliver_claimed(state: &AppState, row: EmailOutboxRow) -> anyhow::Resul
                 Utc::now() + delay,
             )
             .await?;
-            metrics::counter!("email_outbox_failed_total").increment(1);
             Err(e)
         }
     }
