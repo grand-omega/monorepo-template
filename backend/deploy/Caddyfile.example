@@ -1,0 +1,37 @@
+# Example production Caddy config for lab-rust-server.
+#
+# Replace the domains before use. The Rust app should listen on a private
+# interface or Docker network address, not a public internet-facing port.
+
+api.example.com {
+	encode zstd gzip
+
+	reverse_proxy rust-server:8080 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-For {remote_host}
+	}
+}
+
+# Optional: serve the admin SPA from the same reverse proxy and forward
+# /admin/api/* requests to the Rust backend.
+admin.example.com {
+	encode zstd gzip
+
+	# If the admin frontend is a static build, point this at its build output.
+	# root * /srv/admin
+	# try_files {path} /index.html
+	# file_server
+
+	reverse_proxy /admin/api/* rust-server:8080 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Forwarded-For {remote_host}
+	}
+}
+
+# Optional: expose metrics only on a private/admin network. Do not publish this
+# hostname publicly unless it is protected by network policy or authentication.
+# metrics.example.internal {
+# 	reverse_proxy rust-server:9090
+# }
