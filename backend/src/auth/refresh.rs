@@ -1,11 +1,17 @@
 use crate::error::AppError;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use rand::RngCore;
-use rand::rngs::OsRng;
+use rand::TryRng;
+use rand::rngs::SysRng;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
+
+pub fn fill_random(dst: &mut [u8]) {
+    SysRng
+        .try_fill_bytes(dst)
+        .expect("system RNG (getrandom) failed");
+}
 
 pub const REFRESH_VERSION_PREFIX: &str = "v1.";
 const SECRET_BYTES: usize = 32;
@@ -26,7 +32,7 @@ pub struct ParsedRefreshToken {
 pub fn generate() -> NewRefreshToken {
     let id = Uuid::now_v7();
     let mut secret = [0u8; SECRET_BYTES];
-    OsRng.fill_bytes(&mut secret);
+    fill_random(&mut secret);
     let wire = format!(
         "{prefix}{id}.{secret}",
         prefix = REFRESH_VERSION_PREFIX,

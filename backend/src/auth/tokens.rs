@@ -99,11 +99,11 @@ mod tests {
     use super::*;
     use ed25519_dalek::SigningKey;
     use ed25519_dalek::pkcs8::{EncodePrivateKey, EncodePublicKey, spki::der::pem::LineEnding};
-    use rand::rngs::OsRng;
 
     fn test_keys() -> JwtKeys {
-        let mut csprng = OsRng;
-        let signing = SigningKey::generate(&mut csprng);
+        let mut seed = [0u8; 32];
+        crate::auth::refresh::fill_random(&mut seed);
+        let signing = SigningKey::from_bytes(&seed);
         let priv_pem = signing.to_pkcs8_pem(LineEnding::LF).unwrap().to_string();
         let pub_pem = signing
             .verifying_key()

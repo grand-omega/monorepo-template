@@ -8,8 +8,6 @@ use crate::email::service as email_service;
 use crate::error::{AppError, AppResult};
 use crate::users::repo as users_repo;
 use chrono::Utc;
-use rand::RngCore;
-use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
 use std::net::IpAddr;
 use tracing::{info, warn};
@@ -74,7 +72,7 @@ pub async fn register(
 fn build_verification_link(state: &AppState, _user_id: &Uuid, _email: &str) -> (String, Uuid, Vec<u8>) {
     let token_id = Uuid::now_v7();
     let mut secret = [0u8; 32];
-    OsRng.fill_bytes(&mut secret);
+    refresh::fill_random(&mut secret);
     let hash = sha256(&secret);
     let token_str = format!(
         "{}.{}",
@@ -92,7 +90,7 @@ fn build_verification_link(state: &AppState, _user_id: &Uuid, _email: &str) -> (
 fn build_reset_link(state: &AppState) -> (String, Uuid, Vec<u8>) {
     let token_id = Uuid::now_v7();
     let mut secret = [0u8; 32];
-    OsRng.fill_bytes(&mut secret);
+    refresh::fill_random(&mut secret);
     let hash = sha256(&secret);
     let token_str = format!(
         "{}.{}",

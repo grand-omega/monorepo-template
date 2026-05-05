@@ -41,8 +41,8 @@ sqlx = { version = "0.8", default-features = false, features = [
     "json",
     "ipnetwork",
 ] }
-deadpool-redis = "0.18"
-redis = { version = "0.27", default-features = false, features = [
+deadpool-redis = "0.23"
+redis = { version = "1", default-features = false, features = [
     "tokio-rustls-comp",
     "tls-rustls",
 ] }
@@ -50,27 +50,27 @@ redis = { version = "0.27", default-features = false, features = [
 # auth / crypto
 argon2 = { version = "0.5", features = ["std"] }
 password-hash = { version = "0.5", features = ["std"] }
-jsonwebtoken = "9"
-rand = "0.8"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+rand = "0.10"
 sha2 = "0.10"
 subtle = "2"
 zeroize = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
 base64 = "0.22"
-ed25519-dalek = { version = "2", features = ["pem", "pkcs8", "rand_core"] }
+ed25519-dalek = { version = "2", features = ["pem", "pkcs8"] }
 
 # serde / validation / errors
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-validator = { version = "0.18", features = ["derive"] }
-thiserror = "1"
+validator = { version = "0.20", features = ["derive"] }
+thiserror = "2"
 anyhow = "1"
 
 # observability
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
-metrics = "0.23"
-metrics-exporter-prometheus = { version = "0.15", default-features = false, features = ["http-listener"] }
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.18", default-features = false, features = ["http-listener"] }
 
 # email
 lettre = { version = "0.11", default-features = false, features = [
@@ -97,7 +97,7 @@ chrono = { version = "0.4", features = ["serde"] }
 http = "1"
 url = { version = "2", features = ["serde"] }
 async-trait = "0.1"
-ipnetwork = "0.20"
+ipnetwork = "0.20"  # pinned to match sqlx 0.8.6's internal version (bump together when sqlx 0.9 stabilizes)
 clap = { version = "4", features = ["derive", "env"] }
 futures-util = "0.3"
 humantime-serde = "1"
@@ -105,8 +105,8 @@ mime = "0.3"
 pin-project-lite = "0.2"
 
 [dev-dependencies]
-testcontainers = "0.23"
-testcontainers-modules = { version = "0.11", features = ["postgres", "redis"] }
+testcontainers = "0.27"
+testcontainers-modules = { version = "0.15", features = ["postgres", "redis"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 http-body-util = "0.1"
 fake = { version = "3", features = ["derive"] }
