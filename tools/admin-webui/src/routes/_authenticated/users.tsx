@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { UsersListPage } from "@/features/users/list-page";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/users")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -8,8 +7,12 @@ export const Route = createFileRoute("/_authenticated/users")({
       typeof search.cursor === "string" && search.cursor.length > 0 ? search.cursor : undefined,
     limit: parseLimit(search.limit),
   }),
-  component: UsersListPage,
+  component: UsersLayout,
 });
+
+function UsersLayout() {
+  return <Outlet />;
+}
 
 function parseLimit(value: unknown): number {
   const parsed = typeof value === "string" ? Number(value) : value;
