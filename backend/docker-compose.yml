@@ -1,13 +1,13 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
     ports: ["5432:5432"]
     volumes:
-      - pg:/var/lib/postgresql/data
+      - pg18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 2s
@@ -15,7 +15,7 @@ services:
       retries: 30
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -68,4 +68,4 @@ services:
       - "9090:9090"
 
 volumes:
-  pg:
+  pg18:
