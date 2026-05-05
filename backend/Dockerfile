@@ -2,6 +2,12 @@
 ARG RUST_VERSION=1.95
 
 FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-slim AS chef
+# `curl` is required at build time by utoipa-swagger-ui's build.rs to fetch
+# Swagger UI assets. `pkg-config` + libssl-dev are kept in case any future
+# transitive dep needs them.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates pkg-config libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 FROM chef AS planner
