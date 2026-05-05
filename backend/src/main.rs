@@ -106,6 +106,7 @@ async fn run_serve() -> Result<()> {
     };
 
     spawn_cleanup_task(state.clone());
+    spawn_email_outbox_task(state.clone());
 
     let app_router = router::build_router(state.clone());
 
@@ -198,6 +199,16 @@ fn spawn_cleanup_task(state: AppState) {
                     }
                 }
             }
+        }
+    });
+}
+
+fn spawn_email_outbox_task(state: AppState) {
+    tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(std::time::Duration::from_secs(30));
+        loop {
+            ticker.tick().await;
+            lab_rust_server::email::service::dispatch_due(&state, 25).await;
         }
     });
 }

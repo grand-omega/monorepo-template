@@ -1,0 +1,42 @@
+groups:
+  - name: lab-rust-server
+    rules:
+      - alert: LabRustServerHigh5xxRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: "High 5xx rate from lab-rust-server"
+
+      - alert: LabRustServerReadinessFailing
+        expr: sum(rate(http_requests_total{route="/readyz",status!="200"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "Readiness checks are failing"
+
+      - alert: LabRustServerRefreshReuseDetected
+        expr: increase(auth_refresh_reuse_detected_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: page
+        annotations:
+          summary: "Refresh token reuse detected"
+
+      - alert: LabRustServerRateLimitRedisErrors
+        expr: increase(rate_limit_redis_errors_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Rate limiter is failing open due to Redis errors"
+
+      - alert: LabRustServerEmailFailures
+        expr: increase(email_outbox_failed_total[15m]) > 5
+        for: 15m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Email outbox delivery failures are elevated"

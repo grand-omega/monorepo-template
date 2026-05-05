@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::auth::dto::{AcceptedResponse, UserSummary};
+use crate::auth::dto::{AcceptedResponse, TokenPair, UserSummary};
 use crate::error::{AppError, AppResult, ErrorBody};
 use crate::middleware::auth::AuthUser;
 use crate::middleware::rate_limit::{self, Class};
@@ -138,7 +138,7 @@ pub async fn delete_me(
     security(("bearer" = [])),
     request_body = ChangePasswordRequest,
     responses(
-        (status = 200, description = "Password changed; all other sessions revoked", body = AcceptedResponse),
+        (status = 200, description = "Password changed; existing refresh sessions revoked and a new token pair returned", body = TokenPair),
         (status = 401, description = "Wrong current password or missing access token", body = ErrorBody),
         (status = 422, description = "Validation failed", body = ErrorBody),
     ),
@@ -147,14 +147,14 @@ pub async fn change_password(
     State(state): State<AppState>,
     user: AuthUser,
     Json(body): Json<ChangePasswordRequest>,
-) -> AppResult<(StatusCode, Json<AcceptedResponse>)> {
+) -> AppResult<Json<TokenPair>> {
     body.validate().map_err(AppError::from)?;
-    service::change_password(
+    let pair = service::change_password(
         &state,
         user.claims.sub,
         &body.current_password,
         &body.new_password,
     )
     .await?;
-    Ok((StatusCode::OK, Json(AcceptedResponse::default())))
+    Ok(Json(pair))
 }

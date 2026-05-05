@@ -102,6 +102,25 @@ pub async fn revoke_token(pool: &PgPool, id: Uuid, reason: &str) -> AppResult<()
     Ok(())
 }
 
+pub async fn revoke_token_by_hash(
+    pool: &PgPool,
+    id: Uuid,
+    token_hash: &[u8],
+    reason: &str,
+) -> AppResult<bool> {
+    let res = sqlx::query(
+        r#"UPDATE refresh_tokens
+           SET revoked_at = COALESCE(revoked_at, now()), revoked_reason = COALESCE(revoked_reason, $3)
+           WHERE id = $1 AND token_hash = $2"#,
+    )
+    .bind(id)
+    .bind(token_hash)
+    .bind(reason)
+    .execute(pool)
+    .await?;
+    Ok(res.rows_affected() == 1)
+}
+
 pub async fn revoke_family(
     executor: impl PgExecutor<'_>,
     family_id: Uuid,

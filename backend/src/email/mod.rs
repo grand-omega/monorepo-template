@@ -1,4 +1,5 @@
 pub mod mailer;
+pub mod outbox;
 pub mod routes;
 pub mod service;
 pub mod templates;

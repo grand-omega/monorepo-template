@@ -1,6 +1,7 @@
 use crate::AppState;
 use crate::config::AppEnv;
 use crate::health;
+use crate::middleware::http_metrics;
 use crate::middleware::request_id::UuidV7RequestId;
 use crate::middleware::security_headers;
 use crate::openapi::ApiDoc;
@@ -73,6 +74,7 @@ pub fn build_router(state: AppState) -> Router {
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                 .on_response(DefaultOnResponse::new().level(Level::INFO)),
         )
+        .layer(axum::middleware::from_fn(http_metrics::record))
         .layer(cors)
         .layer(CompressionLayer::new())
         .layer(TimeoutLayer::with_status_code(

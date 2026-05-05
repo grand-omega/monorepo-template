@@ -379,6 +379,8 @@ async fn change_password_revokes_other_sessions_and_keeps_caller() {
         .await
         .unwrap();
     assert_eq!(r.status(), StatusCode::OK);
+    let body: Value = r.json().await.unwrap();
+    let new_refresh = body["refresh_token"].as_str().unwrap().to_string();
 
     // Session B's refresh token is now revoked.
     let r = client
@@ -388,6 +390,15 @@ async fn change_password_revokes_other_sessions_and_keeps_caller() {
         .await
         .unwrap();
     assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+
+    // The caller receives a fresh refresh token that works after the change.
+    let r = client
+        .post(format!("{}/v1/auth/refresh", app.base_url))
+        .json(&json!({ "refresh_token": new_refresh }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
 
     // Login with new password works.
     let _ = login(&client, &app.base_url, email, NEW_PASSWORD).await;

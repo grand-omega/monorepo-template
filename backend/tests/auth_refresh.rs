@@ -3,6 +3,7 @@
 
 mod common;
 
+use base64::Engine;
 use common::spawn_app;
 use reqwest::StatusCode;
 use serde_json::{Value, json};
@@ -37,6 +38,17 @@ async fn refresh(client: &reqwest::Client, base: &str, refresh_token: &str) -> r
         .send()
         .await
         .expect("refresh")
+}
+
+fn forge_refresh_with_wrong_secret(token: &str) -> String {
+    let stripped = token.strip_prefix("v1.").expect("refresh token prefix");
+    let (id_part, _) = stripped.split_once('.').expect("refresh token shape");
+    let wrong_secret = [7u8; 32];
+    format!(
+        "v1.{}.{}",
+        id_part,
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(wrong_secret)
+    )
 }
 
 #[tokio::test]
@@ -232,4 +244,26 @@ async fn logout_revokes_only_presented_token_logout_all_revokes_family() {
         refresh(&client, &app.base_url, &r2_rotated).await.status(),
         StatusCode::UNAUTHORIZED
     );
+}
+
+#[tokio::test]
+async fn logout_requires_refresh_secret_not_only_token_id() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+
+    register(&client, &app.base_url, "logout-forged@example.test").await;
+    let pair = login(&client, &app.base_url, "logout-forged@example.test").await;
+    let refresh_token = pair["refresh_token"].as_str().unwrap().to_string();
+    let forged = forge_refresh_with_wrong_secret(&refresh_token);
+
+    let resp = client
+        .post(format!("{}/v1/auth/logout", app.base_url))
+        .json(&json!({ "refresh_token": forged }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+    let resp = refresh(&client, &app.base_url, &refresh_token).await;
+    assert_eq!(resp.status(), StatusCode::OK);
 }

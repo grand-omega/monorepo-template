@@ -442,7 +442,10 @@ pub async fn refresh_token(
 
 pub async fn logout(state: &AppState, presented_wire: &str) -> AppResult<()> {
     let parsed = refresh::parse(presented_wire)?;
-    repo::revoke_token(&state.db, parsed.id, "logout").await?;
+    let token_hash = refresh::sha256(&parsed.secret);
+    if !repo::revoke_token_by_hash(&state.db, parsed.id, &token_hash, "logout").await? {
+        return Err(AppError::InvalidToken);
+    }
     Ok(())
 }
 
