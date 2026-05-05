@@ -36,7 +36,8 @@ impl JwtKeys {
         public_key_pem: &str,
     ) -> Result<Self> {
         let private = Zeroizing::new(private_key_pem.as_bytes().to_vec());
-        let encoding = EncodingKey::from_ed_pem(&private).context("invalid Ed25519 private key PEM")?;
+        let encoding =
+            EncodingKey::from_ed_pem(&private).context("invalid Ed25519 private key PEM")?;
         let decoding = DecodingKey::from_ed_pem(public_key_pem.as_bytes())
             .context("invalid Ed25519 public key PEM")?;
         Ok(Self {
@@ -120,7 +121,7 @@ mod tests {
             issue_access_token(&keys, user, true, Duration::from_secs(900)).unwrap();
         let decoded = decode_access_token(&keys, &tok).unwrap();
         assert_eq!(decoded.sub, claims.sub);
-        assert_eq!(decoded.email_verified, true);
+        assert!(decoded.email_verified);
     }
 
     #[test]

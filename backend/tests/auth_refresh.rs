@@ -69,9 +69,15 @@ async fn duplicate_register_stays_202() {
     let client = reqwest::Client::new();
 
     let e = "dup@example.test";
-    assert_eq!(register(&client, &app.base_url, e).await, StatusCode::ACCEPTED);
+    assert_eq!(
+        register(&client, &app.base_url, e).await,
+        StatusCode::ACCEPTED
+    );
     // Same email a second time — must NOT 5xx (was the bug); must NOT leak existence.
-    assert_eq!(register(&client, &app.base_url, e).await, StatusCode::ACCEPTED);
+    assert_eq!(
+        register(&client, &app.base_url, e).await,
+        StatusCode::ACCEPTED
+    );
 
     // Only one row should exist.
     let count: (i64,) = sqlx::query_as("SELECT count(*) FROM users WHERE email = $1::citext")
@@ -202,7 +208,10 @@ async fn logout_revokes_only_presented_token_logout_all_revokes_family() {
         .await
         .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(refresh(&client, &app.base_url, &r1).await.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        refresh(&client, &app.base_url, &r1).await.status(),
+        StatusCode::UNAUTHORIZED
+    );
     // r2 still works.
     let resp = refresh(&client, &app.base_url, &r2).await;
     assert_eq!(resp.status(), StatusCode::OK);

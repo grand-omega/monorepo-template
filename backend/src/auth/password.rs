@@ -20,9 +20,7 @@ impl Argon2Config {
 }
 
 pub fn hash_password(cfg: Argon2Config, password: &str) -> Result<String, AppError> {
-    let argon = cfg
-        .build()
-        .map_err(AppError::Internal)?;
+    let argon = cfg.build().map_err(AppError::Internal)?;
     let salt = SaltString::generate(&mut OsRng);
     let hash = argon
         .hash_password(password.as_bytes(), &salt)
@@ -37,7 +35,9 @@ pub fn verify_password(stored_hash: &str, candidate: &str) -> Result<bool, AppEr
     match Argon2::default().verify_password(candidate.as_bytes(), &parsed) {
         Ok(()) => Ok(true),
         Err(argon2::password_hash::Error::Password) => Ok(false),
-        Err(e) => Err(AppError::Internal(anyhow::anyhow!("argon2 verify failed: {e}"))),
+        Err(e) => Err(AppError::Internal(anyhow::anyhow!(
+            "argon2 verify failed: {e}"
+        ))),
     }
 }
 

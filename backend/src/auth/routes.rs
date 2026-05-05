@@ -33,7 +33,10 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/refresh",
             post(refresh).layer(rate_limit::layer(&state, Class::Medium)),
         )
-        .route("/logout", post(logout).layer(rate_limit::layer(&state, Class::Low)))
+        .route(
+            "/logout",
+            post(logout).layer(rate_limit::layer(&state, Class::Low)),
+        )
         .route(
             "/logout-all",
             post(logout_all).layer(rate_limit::layer(&state, Class::Low)),
@@ -85,7 +88,13 @@ pub async fn register(
     Json(body): Json<RegisterRequest>,
 ) -> AppResult<(StatusCode, Json<AcceptedResponse>)> {
     body.validate().map_err(AppError::from)?;
-    service::register(&state, &body.email, &body.password, body.display_name.as_deref()).await?;
+    service::register(
+        &state,
+        &body.email,
+        &body.password,
+        body.display_name.as_deref(),
+    )
+    .await?;
     Ok((StatusCode::ACCEPTED, Json(AcceptedResponse::default())))
 }
 

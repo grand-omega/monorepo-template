@@ -8,7 +8,13 @@ use tracing::{info, warn};
 
 #[async_trait]
 pub trait Mailer: Send + Sync + 'static {
-    async fn send(&self, to: &str, subject: &str, html_body: String, text_body: String) -> Result<()>;
+    async fn send(
+        &self,
+        to: &str,
+        subject: &str,
+        html_body: String,
+        text_body: String,
+    ) -> Result<()>;
 }
 
 pub type DynMailer = Arc<dyn Mailer>;

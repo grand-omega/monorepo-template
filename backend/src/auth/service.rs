@@ -1,6 +1,9 @@
 use crate::AppState;
 use crate::auth::dto::{TokenPair, UserSummary};
-use crate::auth::password::{Argon2Config, dummy_hash, hash_password, rehash_needed, verify_password};
+use crate::auth::events::{self, EventCtx, EventKind};
+use crate::auth::password::{
+    Argon2Config, dummy_hash, hash_password, rehash_needed, verify_password,
+};
 use crate::auth::refresh;
 use crate::auth::repo;
 use crate::auth::tokens::issue_access_token;
@@ -79,14 +82,21 @@ pub async fn register(
     Ok(())
 }
 
-fn build_verification_link(state: &AppState, _user_id: &Uuid, _email: &str) -> (String, Uuid, Vec<u8>) {
+fn build_verification_link(
+    state: &AppState,
+    _user_id: &Uuid,
+    _email: &str,
+) -> (String, Uuid, Vec<u8>) {
     let token_id = Uuid::now_v7();
     let mut secret = [0u8; 32];
     refresh::fill_random(&mut secret);
     let hash = sha256(&secret);
     let token_str = format!(
         "{}.{}",
-        base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, token_id.as_bytes()),
+        base64::Engine::encode(
+            &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+            token_id.as_bytes()
+        ),
         base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, secret),
     );
     let url = format!(
@@ -104,7 +114,10 @@ fn build_reset_link(state: &AppState) -> (String, Uuid, Vec<u8>) {
     let hash = sha256(&secret);
     let token_str = format!(
         "{}.{}",
-        base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, token_id.as_bytes()),
+        base64::Engine::encode(
+            &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+            token_id.as_bytes()
+        ),
         base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, secret),
     );
     let url = format!(
@@ -165,6 +178,17 @@ pub async fn login(
             // Equalize timing — always run an argon2 verify against a dummy hash.
             let _ = verify_password(dummy_hash(argon), password);
             metrics::counter!("auth_login_total", "result" => "unknown_email").increment(1);
+            events::record(
+                &state.db,
+                EventKind::LoginFailureUnknownEmail,
+                EventCtx {
+                    user_id: None,
+                    ip: ctx.ip,
+                    user_agent: ctx.user_agent,
+                    detail: None,
+                },
+            )
+            .await;
             return Err(AppError::InvalidCredentials);
         }
         Some(u) => u,
@@ -173,6 +197,17 @@ pub async fn login(
     let now = Utc::now();
     if user.is_locked(now) {
         metrics::counter!("auth_login_total", "result" => "locked").increment(1);
+        events::record(
+            &state.db,
+            EventKind::LoginBlockedLocked,
+            EventCtx {
+                user_id: Some(user.id),
+                ip: ctx.ip,
+                user_agent: ctx.user_agent,
+                detail: None,
+            },
+        )
+        .await;
         return Err(AppError::AccountLocked);
     }
 
@@ -181,7 +216,7 @@ pub async fn login(
         let lock_until = now
             + chrono::Duration::from_std(state.config.login_lock_duration)
                 .unwrap_or(chrono::Duration::minutes(15));
-        users_repo::record_failed_login(
+        let now_locked = users_repo::record_failed_login(
             &state.db,
             user.id,
             state.config.login_max_failures,
@@ -189,19 +224,54 @@ pub async fn login(
         )
         .await?;
         metrics::counter!("auth_login_total", "result" => "wrong_password").increment(1);
+        events::record(
+            &state.db,
+            EventKind::LoginFailureWrongPassword,
+            EventCtx {
+                user_id: Some(user.id),
+                ip: ctx.ip,
+                user_agent: ctx.user_agent,
+                detail: None,
+            },
+        )
+        .await;
+        if now_locked {
+            events::record(
+                &state.db,
+                EventKind::AccountLockedTriggered,
+                EventCtx {
+                    user_id: Some(user.id),
+                    ip: ctx.ip,
+                    user_agent: ctx.user_agent,
+                    detail: None,
+                },
+            )
+            .await;
+        }
         return Err(AppError::InvalidCredentials);
     }
 
-    if rehash_needed(argon, &user.password_hash) {
-        if let Ok(new_hash) = hash_password(argon, password) {
-            let _ = users_repo::update_password(&state.db, user.id, &new_hash).await;
-        }
+    if rehash_needed(argon, &user.password_hash)
+        && let Ok(new_hash) = hash_password(argon, password)
+    {
+        let _ = users_repo::update_password(&state.db, user.id, &new_hash).await;
     }
 
     users_repo::record_successful_login(&state.db, user.id).await?;
 
     let pair = mint_token_pair(state, &user.id, user.email_verified, None, &ctx).await?;
     metrics::counter!("auth_login_total", "result" => "ok").increment(1);
+    events::record(
+        &state.db,
+        EventKind::LoginSuccess,
+        EventCtx {
+            user_id: Some(user.id),
+            ip: ctx.ip,
+            user_agent: ctx.user_agent,
+            detail: None,
+        },
+    )
+    .await;
     Ok(TokenPair {
         access_token: pair.access_token,
         refresh_token: pair.refresh_token,
@@ -289,6 +359,17 @@ pub async fn refresh_token(
             let _ = repo::revoke_family(&mut *tx, row.family_id, "reuse_detected").await;
             tx.commit().await?;
             metrics::counter!("auth_refresh_reuse_detected_total").increment(1);
+            events::record(
+                &state.db,
+                EventKind::RefreshReuseDetected,
+                EventCtx {
+                    user_id: Some(row.user_id),
+                    ip: ctx.ip,
+                    user_agent: ctx.user_agent,
+                    detail: Some(serde_json::json!({ "family_id": row.family_id })),
+                },
+            )
+            .await;
             return Err(AppError::TokenReuseDetected);
         }
         return Err(AppError::InvalidToken);
@@ -297,6 +378,17 @@ pub async fn refresh_token(
         let _ = repo::revoke_family(&mut *tx, row.family_id, "reuse_detected").await;
         tx.commit().await?;
         metrics::counter!("auth_refresh_reuse_detected_total").increment(1);
+        events::record(
+            &state.db,
+            EventKind::RefreshReuseDetected,
+            EventCtx {
+                user_id: Some(row.user_id),
+                ip: ctx.ip,
+                user_agent: ctx.user_agent,
+                detail: Some(serde_json::json!({ "family_id": row.family_id })),
+            },
+        )
+        .await;
         return Err(AppError::TokenReuseDetected);
     }
 
@@ -356,6 +448,15 @@ pub async fn logout(state: &AppState, presented_wire: &str) -> AppResult<()> {
 
 pub async fn logout_all(state: &AppState, user_id: Uuid) -> AppResult<()> {
     repo::revoke_all_for_user(&state.db, user_id, "logout_all").await?;
+    events::record(
+        &state.db,
+        EventKind::LogoutAll,
+        EventCtx {
+            user_id: Some(user_id),
+            ..Default::default()
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -370,6 +471,15 @@ pub async fn verify_email(state: &AppState, token: &str) -> AppResult<()> {
     };
     users_repo::mark_email_verified(&mut *tx, user_id).await?;
     tx.commit().await?;
+    events::record(
+        &state.db,
+        EventKind::EmailVerified,
+        EventCtx {
+            user_id: Some(user_id),
+            ..Default::default()
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -417,6 +527,16 @@ pub async fn request_password_reset(
     )
     .await?;
     email_service::send_password_reset(state, &user.email, &reset_url).await;
+    events::record(
+        &state.db,
+        EventKind::PasswordResetRequested,
+        EventCtx {
+            user_id: Some(user.id),
+            ip,
+            ..Default::default()
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -436,6 +556,15 @@ pub async fn confirm_password_reset(
     users_repo::update_password(&mut *tx, user_id, &new_hash).await?;
     repo::revoke_all_for_user(&mut *tx, user_id, "password_reset").await?;
     tx.commit().await?;
+    events::record(
+        &state.db,
+        EventKind::PasswordResetCompleted,
+        EventCtx {
+            user_id: Some(user_id),
+            ..Default::default()
+        },
+    )
+    .await;
     Ok(())
 }
 

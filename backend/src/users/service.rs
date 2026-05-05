@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::auth::events::{self, EventCtx, EventKind};
 use crate::auth::password::{hash_password, verify_password};
 use crate::auth::repo as auth_repo;
 use crate::error::{AppError, AppResult};
@@ -45,5 +46,14 @@ pub async fn change_password(
     repo::update_password(&mut *tx, user_id, &new_hash).await?;
     auth_repo::revoke_all_for_user(&mut *tx, user_id, "password_change").await?;
     tx.commit().await?;
+    events::record(
+        &state.db,
+        EventKind::PasswordChanged,
+        EventCtx {
+            user_id: Some(user_id),
+            ..Default::default()
+        },
+    )
+    .await;
     Ok(())
 }

@@ -9,6 +9,7 @@ use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderName, HeaderValue, Method, header};
 use axum::routing::get;
+use http::StatusCode;
 use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::catch_panic::CatchPanicLayer;
@@ -16,7 +17,6 @@ use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::request_id::{PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
-use http::StatusCode;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
@@ -40,8 +40,9 @@ pub fn build_router(state: AppState) -> Router {
         .layer(DefaultBodyLimit::max(body_limit));
 
     if state.config.env.is_dev() {
-        let swagger: Router<AppState> =
-            SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()).into();
+        let swagger: Router<AppState> = SwaggerUi::new("/docs")
+            .url("/openapi.json", ApiDoc::openapi())
+            .into();
         router = router.merge(swagger);
     }
 
@@ -74,11 +75,7 @@ fn build_cors(state: &AppState) -> CorsLayer {
     if state.config.cors_allowed_origins.is_empty() {
         CorsLayer::new()
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-            .allow_headers([
-                header::AUTHORIZATION,
-                header::CONTENT_TYPE,
-                X_REQUEST_ID,
-            ])
+            .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, X_REQUEST_ID])
     } else {
         let origins: Vec<HeaderValue> = state
             .config
@@ -89,11 +86,7 @@ fn build_cors(state: &AppState) -> CorsLayer {
         CorsLayer::new()
             .allow_origin(origins)
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-            .allow_headers([
-                header::AUTHORIZATION,
-                header::CONTENT_TYPE,
-                X_REQUEST_ID,
-            ])
+            .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, X_REQUEST_ID])
             .allow_credentials(state.config.env == AppEnv::Prod)
     }
 }

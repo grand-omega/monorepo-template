@@ -71,13 +71,14 @@ pub async fn record_successful_login(pool: &PgPool, id: Uuid) -> AppResult<()> {
     Ok(())
 }
 
+/// Returns true if this attempt pushed the account into a locked state.
 pub async fn record_failed_login(
     pool: &PgPool,
     id: Uuid,
     max_failures: i32,
     lock_until: DateTime<Utc>,
-) -> AppResult<()> {
-    sqlx::query(
+) -> AppResult<bool> {
+    let row: Option<(i32, Option<DateTime<Utc>>)> = sqlx::query_as(
         r#"UPDATE users
            SET failed_login_count = failed_login_count + 1,
                locked_until = CASE
@@ -85,34 +86,35 @@ pub async fn record_failed_login(
                    ELSE locked_until
                END,
                updated_at = now()
-           WHERE id = $1"#,
+           WHERE id = $1
+           RETURNING failed_login_count, locked_until"#,
     )
     .bind(id)
     .bind(max_failures)
     .bind(lock_until)
-    .execute(pool)
+    .fetch_optional(pool)
     .await?;
-    Ok(())
+    Ok(matches!(row, Some((c, Some(_))) if c >= max_failures))
 }
 
 pub async fn mark_email_verified(executor: impl PgExecutor<'_>, id: Uuid) -> AppResult<()> {
-    sqlx::query(
-        r#"UPDATE users SET email_verified = TRUE, updated_at = now() WHERE id = $1"#,
-    )
-    .bind(id)
-    .execute(executor)
-    .await?;
+    sqlx::query(r#"UPDATE users SET email_verified = TRUE, updated_at = now() WHERE id = $1"#)
+        .bind(id)
+        .execute(executor)
+        .await?;
     Ok(())
 }
 
-pub async fn update_password(executor: impl PgExecutor<'_>, id: Uuid, new_hash: &str) -> AppResult<()> {
-    sqlx::query(
-        r#"UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1"#,
-    )
-    .bind(id)
-    .bind(new_hash)
-    .execute(executor)
-    .await?;
+pub async fn update_password(
+    executor: impl PgExecutor<'_>,
+    id: Uuid,
+    new_hash: &str,
+) -> AppResult<()> {
+    sqlx::query(r#"UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1"#)
+        .bind(id)
+        .bind(new_hash)
+        .execute(executor)
+        .await?;
     Ok(())
 }
 
@@ -121,13 +123,11 @@ pub async fn update_display_name(
     id: Uuid,
     display_name: Option<&str>,
 ) -> AppResult<()> {
-    sqlx::query(
-        r#"UPDATE users SET display_name = $2, updated_at = now() WHERE id = $1"#,
-    )
-    .bind(id)
-    .bind(display_name)
-    .execute(pool)
-    .await?;
+    sqlx::query(r#"UPDATE users SET display_name = $2, updated_at = now() WHERE id = $1"#)
+        .bind(id)
+        .bind(display_name)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 

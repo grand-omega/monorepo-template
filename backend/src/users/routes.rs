@@ -15,7 +15,10 @@ use validator::Validate;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/me", get(get_me).layer(rate_limit::layer(&state, Class::Medium)))
+        .route(
+            "/me",
+            get(get_me).layer(rate_limit::layer(&state, Class::Medium)),
+        )
         .route(
             "/me",
             patch(patch_me).layer(rate_limit::layer(&state, Class::Low)),

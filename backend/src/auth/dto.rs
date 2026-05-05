@@ -17,7 +17,7 @@ pub struct RegisterRequest {
 pub struct LoginRequest {
     #[validate(email, length(max = 254))]
     pub email: String,
-    #[validate(length(min = 1, max = 128))]
+    #[validate(length(min = 12, max = 128))]
     pub password: String,
 }
 

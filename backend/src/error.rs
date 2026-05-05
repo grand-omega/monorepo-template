@@ -94,11 +94,12 @@ impl AppError {
             AppError::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
             AppError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, "bad_request"),
-            AppError::ServiceUnavailable => (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable"),
-            AppError::Internal(_)
-            | AppError::Sqlx(_)
-            | AppError::Jwt(_)
-            | AppError::Json(_) => (StatusCode::INTERNAL_SERVER_ERROR, "internal_error"),
+            AppError::ServiceUnavailable => {
+                (StatusCode::SERVICE_UNAVAILABLE, "service_unavailable")
+            }
+            AppError::Internal(_) | AppError::Sqlx(_) | AppError::Jwt(_) | AppError::Json(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "internal_error")
+            }
         }
     }
 }

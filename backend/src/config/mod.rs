@@ -31,6 +31,9 @@ pub struct Config {
     pub smtp_url: String,
     pub smtp_from: String,
     pub smtp_from_name: String,
+    /// Permit fallback to the no-op mailer when SMTP init fails. Refused in prod.
+    #[serde(default)]
+    pub allow_noop_mailer: bool,
 
     pub argon2_m_cost: u32,
     pub argon2_t_cost: u32,
@@ -118,6 +121,56 @@ impl Config {
         if self.refresh_token_ttl < Duration::from_secs(60 * 60) {
             anyhow::bail!("refresh_token_ttl must be >= 1 hour");
         }
+
+        match self.public_base_url.scheme() {
+            "http" | "https" => {}
+            other => anyhow::bail!("public_base_url scheme must be http or https, got {other}"),
+        }
+        if !self.public_base_url.has_host() {
+            anyhow::bail!("public_base_url must be absolute (include a host)");
+        }
+
+        // Argon2 parameter sanity bounds (RFC 9106).
+        if !(8..=1_048_576).contains(&self.argon2_m_cost) {
+            anyhow::bail!(
+                "argon2_m_cost must be between 8 and 1048576 KiB, got {}",
+                self.argon2_m_cost
+            );
+        }
+        if !(1..=64).contains(&self.argon2_t_cost) {
+            anyhow::bail!(
+                "argon2_t_cost must be between 1 and 64, got {}",
+                self.argon2_t_cost
+            );
+        }
+        if !(1..=16).contains(&self.argon2_p_cost) {
+            anyhow::bail!(
+                "argon2_p_cost must be between 1 and 16, got {}",
+                self.argon2_p_cost
+            );
+        }
+
+        // OWASP-aligned minimums when running in production.
+        if matches!(self.env, AppEnv::Prod) {
+            if self.allow_noop_mailer {
+                anyhow::bail!(
+                    "APP_ALLOW_NOOP_MAILER must not be true in prod — verification emails would be silently dropped"
+                );
+            }
+            if self.argon2_m_cost < 19_456 {
+                anyhow::bail!(
+                    "argon2_m_cost must be >= 19456 KiB in prod (OWASP minimum), got {}",
+                    self.argon2_m_cost
+                );
+            }
+            if self.argon2_t_cost < 2 {
+                anyhow::bail!(
+                    "argon2_t_cost must be >= 2 in prod (OWASP minimum), got {}",
+                    self.argon2_t_cost
+                );
+            }
+        }
+
         Ok(())
     }
 }

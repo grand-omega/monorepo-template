@@ -73,12 +73,24 @@ async fn run_serve() -> Result<()> {
         &cfg.jwt_public_key,
     )?;
 
-    let mailer: DynMailer = match SmtpMailer::new(&cfg.smtp_url, &cfg.smtp_from, &cfg.smtp_from_name)
-    {
+    let mailer: DynMailer = match SmtpMailer::new(
+        &cfg.smtp_url,
+        &cfg.smtp_from,
+        &cfg.smtp_from_name,
+    ) {
         Ok(m) => Arc::new(m),
-        Err(e) => {
-            error!(error = ?e, "failed to init SMTP mailer; falling back to NoopMailer");
+        Err(e) if cfg.allow_noop_mailer => {
+            error!(
+                error = ?e,
+                "SMTP init failed; APP_ALLOW_NOOP_MAILER=true → using NoopMailer (verification emails will be dropped)"
+            );
             Arc::new(NoopMailer)
+        }
+        Err(e) => {
+            return Err(e).context(
+                "failed to init SMTP mailer; refusing to start. \
+                 Fix APP_SMTP_URL or set APP_ALLOW_NOOP_MAILER=true (dev/test only).",
+            );
         }
     };
 
@@ -145,15 +157,40 @@ async fn run_serve() -> Result<()> {
 }
 
 fn spawn_cleanup_task(state: AppState) {
+    use lab_rust_server::auth::repo;
+
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(std::time::Duration::from_secs(60 * 60));
         loop {
             ticker.tick().await;
             let cutoff = chrono::Utc::now() - chrono::Duration::days(30);
-            match lab_rust_server::auth::repo::delete_expired(&state.db, cutoff).await {
-                Ok(n) if n > 0 => info!(deleted = n, "cleaned expired refresh tokens"),
-                Ok(_) => {}
-                Err(e) => error!(error = ?e, "refresh token cleanup failed"),
+
+            let refresh = repo::delete_expired_refresh(&state.db, cutoff).await;
+            let verify = repo::delete_expired_email_verification(&state.db, cutoff).await;
+            let reset = repo::delete_expired_password_reset(&state.db, cutoff).await;
+
+            match (refresh, verify, reset) {
+                (Ok(r), Ok(v), Ok(p)) => {
+                    if r + v + p > 0 {
+                        info!(
+                            refresh = r,
+                            email_verification = v,
+                            password_reset = p,
+                            "cleaned expired auth tokens"
+                        );
+                    }
+                }
+                (refresh, verify, reset) => {
+                    if let Err(e) = refresh {
+                        error!(error = ?e, "refresh token cleanup failed");
+                    }
+                    if let Err(e) = verify {
+                        error!(error = ?e, "email verification cleanup failed");
+                    }
+                    if let Err(e) = reset {
+                        error!(error = ?e, "password reset cleanup failed");
+                    }
+                }
             }
         }
     });

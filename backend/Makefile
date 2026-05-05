@@ -1,4 +1,4 @@
-.PHONY: dev keys clean test fmt clippy
+.PHONY: dev keys down test test-integration test-all fmt clippy check clean
 
 ENV_FILE := .env.local
 
@@ -20,14 +20,25 @@ dev: keys
 down:
 	docker compose down
 
+# Unit tests only — no containers, no network. Fast and CI-safe by default.
 test:
 	SQLX_OFFLINE=true cargo test --lib
+
+# Integration tests — spins up Postgres + Redis via testcontainers. Requires Docker.
+test-integration:
+	SQLX_OFFLINE=true cargo test --tests
+
+# Everything.
+test-all: test test-integration
 
 fmt:
 	cargo fmt
 
 clippy:
-	cargo clippy --all-targets -- -D warnings
+	SQLX_OFFLINE=true cargo clippy --all-targets -- -D warnings
+
+# Same gate CI runs.
+check: fmt clippy test
 
 clean:
 	cargo clean

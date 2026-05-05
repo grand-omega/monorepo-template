@@ -15,6 +15,7 @@ pub struct RefreshTokenRow {
     pub revoked_reason: Option<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_refresh(
     executor: impl PgExecutor<'_>,
     id: Uuid,
@@ -101,7 +102,11 @@ pub async fn revoke_token(pool: &PgPool, id: Uuid, reason: &str) -> AppResult<()
     Ok(())
 }
 
-pub async fn revoke_family(executor: impl PgExecutor<'_>, family_id: Uuid, reason: &str) -> AppResult<u64> {
+pub async fn revoke_family(
+    executor: impl PgExecutor<'_>,
+    family_id: Uuid,
+    reason: &str,
+) -> AppResult<u64> {
     let res = sqlx::query(
         r#"UPDATE refresh_tokens
            SET revoked_at = COALESCE(revoked_at, now()),
@@ -132,11 +137,39 @@ pub async fn revoke_all_for_user(
     Ok(res.rows_affected())
 }
 
-pub async fn delete_expired(pool: &PgPool, older_than: DateTime<Utc>) -> AppResult<u64> {
+pub async fn delete_expired_refresh(pool: &PgPool, older_than: DateTime<Utc>) -> AppResult<u64> {
     let res = sqlx::query(r#"DELETE FROM refresh_tokens WHERE expires_at < $1"#)
         .bind(older_than)
         .execute(pool)
         .await?;
+    Ok(res.rows_affected())
+}
+
+pub async fn delete_expired_email_verification(
+    pool: &PgPool,
+    older_than: DateTime<Utc>,
+) -> AppResult<u64> {
+    let res = sqlx::query(
+        r#"DELETE FROM email_verification_tokens
+           WHERE expires_at < $1 OR consumed_at < $1"#,
+    )
+    .bind(older_than)
+    .execute(pool)
+    .await?;
+    Ok(res.rows_affected())
+}
+
+pub async fn delete_expired_password_reset(
+    pool: &PgPool,
+    older_than: DateTime<Utc>,
+) -> AppResult<u64> {
+    let res = sqlx::query(
+        r#"DELETE FROM password_reset_tokens
+           WHERE expires_at < $1 OR consumed_at < $1"#,
+    )
+    .bind(older_than)
+    .execute(pool)
+    .await?;
     Ok(res.rows_affected())
 }
 

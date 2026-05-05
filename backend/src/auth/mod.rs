@@ -1,4 +1,5 @@
 pub mod dto;
+pub mod events;
 pub mod password;
 pub mod refresh;
 pub mod repo;

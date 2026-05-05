@@ -5,17 +5,18 @@
 // `TestApp` drops, so each test has full isolation at the cost of
 // ~1-2s startup time for PG.
 
+use async_trait::async_trait;
 use ed25519_dalek::SigningKey;
 use ed25519_dalek::pkcs8::spki::der::pem::LineEnding;
 use ed25519_dalek::pkcs8::{EncodePrivateKey, EncodePublicKey};
 use lab_rust_server::auth::JwtKeys;
 use lab_rust_server::auth::refresh::fill_random;
 use lab_rust_server::config::{AppEnv, Config, LogFormat};
-use lab_rust_server::email::mailer::{DynMailer, NoopMailer};
+use lab_rust_server::email::mailer::{DynMailer, Mailer};
 use lab_rust_server::{AppState, db, redis_pool, router};
 use sqlx::PgPool;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use testcontainers::ContainerAsync;
 use testcontainers::runners::AsyncRunner;
@@ -29,11 +30,66 @@ pub struct TestApp {
     pub base_url: String,
     pub db: PgPool,
     pub jwt_keys: Arc<JwtKeys>,
+    pub mailer: Arc<CapturingMailer>,
     // Containers must outlive the test. Field order matters: server stops
     // first (drop order = decl order), then we tear down infra.
     _server: tokio::task::JoinHandle<()>,
     _pg: ContainerAsync<Postgres>,
     _redis: ContainerAsync<Redis>,
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct CapturedEmail {
+    pub to: String,
+    pub subject: String,
+    pub text: String,
+}
+
+#[derive(Default)]
+pub struct CapturingMailer {
+    pub sent: Mutex<Vec<CapturedEmail>>,
+}
+
+#[async_trait]
+impl Mailer for CapturingMailer {
+    async fn send(
+        &self,
+        to: &str,
+        subject: &str,
+        _html: String,
+        text: String,
+    ) -> anyhow::Result<()> {
+        self.sent.lock().unwrap().push(CapturedEmail {
+            to: to.to_string(),
+            subject: subject.to_string(),
+            text,
+        });
+        Ok(())
+    }
+}
+
+impl CapturingMailer {
+    /// Extract the first URL whose path contains `path_fragment` from the most
+    /// recent email sent to `to`. Body templates render the link as a bare URL
+    /// on its own line, so a whitespace-bounded scan is enough.
+    #[allow(dead_code)]
+    pub fn last_url_to(&self, to: &str, path_fragment: &str) -> Option<String> {
+        let sent = self.sent.lock().unwrap();
+        for captured in sent.iter().rev() {
+            if captured.to != to {
+                continue;
+            }
+            for tok in captured.text.split_whitespace() {
+                if (tok.starts_with("http://") || tok.starts_with("https://"))
+                    && tok.contains(path_fragment)
+                {
+                    return Some(tok.to_string());
+                }
+            }
+        }
+        None
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -85,6 +141,7 @@ pub async fn spawn_app() -> TestApp {
         smtp_url: "smtp://localhost:1".into(),
         smtp_from: "test@test.invalid".into(),
         smtp_from_name: "Test".into(),
+        allow_noop_mailer: true,
         // Tiny argon2 params keep the suite fast.
         argon2_m_cost: 8,
         argon2_t_cost: 1,
@@ -100,7 +157,8 @@ pub async fn spawn_app() -> TestApp {
         log_format: LogFormat::Pretty,
     };
 
-    let mailer: DynMailer = Arc::new(NoopMailer);
+    let capturing = Arc::new(CapturingMailer::default());
+    let mailer: DynMailer = capturing.clone();
     let state = AppState {
         config: Arc::new(config),
         db: pool.clone(),
@@ -125,6 +183,7 @@ pub async fn spawn_app() -> TestApp {
         base_url: format!("http://{addr}"),
         db: pool,
         jwt_keys,
+        mailer: capturing,
         _server: server,
         _pg: pg,
         _redis: redis,

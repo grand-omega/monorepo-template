@@ -16,8 +16,5 @@ pub async fn connect(database_url: &str, max_connections: u32) -> Result<PgPool>
 }
 
 pub async fn run_migrations(pool: &PgPool) -> Result<()> {
-    MIGRATOR
-        .run(pool)
-        .await
-        .context("failed to run migrations")
+    MIGRATOR.run(pool).await.context("failed to run migrations")
 }

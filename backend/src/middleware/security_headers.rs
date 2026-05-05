@@ -8,10 +8,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     router
-        .layer(static_header(
-            "x-content-type-options",
-            "nosniff",
-        ))
+        .layer(static_header("x-content-type-options", "nosniff"))
         .layer(static_header("x-frame-options", "DENY"))
         .layer(static_header("referrer-policy", "no-referrer"))
         .layer(static_header(
