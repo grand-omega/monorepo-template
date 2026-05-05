@@ -1,5 +1,7 @@
 set shell := ["bash", "-cu"]
 
+android_java_home := `if [ -x "${JAVA_HOME:-}/bin/java" ]; then printf "%s" "$JAVA_HOME"; elif [ -x /opt/android-studio/jbr/bin/java ]; then printf "%s" /opt/android-studio/jbr; elif [ -x /usr/lib/jvm/default-java/bin/java ]; then printf "%s" /usr/lib/jvm/default-java; else printf "%s" "${JAVA_HOME:-}"; fi`
+
 default:
     just --list
 
@@ -23,10 +25,10 @@ admin-check:
 
 # Android unit tests.
 android-test:
-    cd apps/android && ./gradlew :composeApp:testDebugUnitTest
+    cd apps/android && JAVA_HOME="{{android_java_home}}" ./gradlew :composeApp:testDebugUnitTest
 
 android-debug:
-    cd apps/android && ./gradlew :composeApp:assembleDebug
+    cd apps/android && JAVA_HOME="{{android_java_home}}" ./gradlew :composeApp:assembleDebug
 
 # Cross-project local gate.
 check: backend-check admin-check android-test
