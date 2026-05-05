@@ -2,6 +2,13 @@
 
 Append entries when you make a non-obvious call. Newest on top. Keep entries short — link to PRs/commits for the long version.
 
+## 2026-05-04 — Step 3: API client
+
+- **Cookie names track the backend, not plan §1 wording.** Backend sets `admin_session` (HttpOnly) and `admin_csrf` (readable) per its actual implementation. The double-submit pattern reads `admin_csrf` and echoes it in `X-CSRF-Token` on POST/PATCH/PUT/DELETE.
+- **`createApi(baseUrl?)` factory in addition to the default `api` singleton.** openapi-fetch captures `globalThis.fetch` at create time, so middleware tests need to install the spy first and then construct a fresh client. The factory also lets tests use an absolute baseUrl since jsdom + undici don't resolve relative URLs the way browsers do.
+- **No redirect when already on `/admin/login`.** A 401 on the login attempt itself shouldn't trigger a full reload back to the same page. Cheap guard inside `authMiddleware`.
+- **`vi.spyOn(globalThis, "fetch")` for middleware tests, MSW reserved for component tests.** Plan §10 already separates these. Direct fetch spying gives precise control over request/response shapes without an extra moving part. MSW stays installed for the component tests added in later steps.
+
 ## 2026-05-04 — Step 2: codegen pipeline
 
 - **Backend `/admin/api/*` JSON routes already exist.** Plan §1 prerequisites are largely landed: `/login`, `/logout`, `/me`, `/users[?q,limit,cursor]`, `/users/{id}`, `/users/{id}/{lock,unlock,verify-email}`, `/auth-events`, and `DELETE /users/{id}/sessions` all return JSON. Snapshot is now the live spec, not a hand-drafted stub. Status of the rest of §1 (CSRF middleware behavior, audit-log writes, admin login lockout, timing-leak fix, prod `/openapi.json` gate) needs verification before step 3 ships.
