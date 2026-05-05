@@ -2,6 +2,11 @@
 
 This repo uses project-level agent instructions under `.claude/agents/`.
 
+The agents are intentionally practical, not ceremonial. Each one should protect
+founder time, prefer the smallest useful change, and report the cheapest
+meaningful verification command. Use them to isolate context and judgment, not
+to simulate a big-company process.
+
 ## Product Engineering
 
 - `backend-rust-engineer`: Rust API, migrations, backend tests, auth/session/email/rate-limit behavior.
@@ -25,8 +30,16 @@ The product engineer role is intentionally split between backend and client work
 ## Default Routing
 
 - Backend code change: start with `backend-rust-engineer`; use `security-reviewer` for auth/session/admin/token changes.
-- Client behavior change: start with `client-app-engineer`; use `frontend-designer` for look-and-feel work.
+- Client behavior/API/state change: start with `client-app-engineer`.
+- UX, layout, copy, accessibility, or visual-state change: use `frontend-designer`.
 - CI, Docker, deploy, release: use `devops-release-engineer`.
 - Test gap or release confidence question: use `qa-test-strategist`.
 - Repo communication or GitHub process: use `github-maintainer`.
 - Ambiguous product idea: use `product-manager` first.
+
+## Practical Gates
+
+- Backend local gate: `just backend-check`
+- Admin local gate: `just admin-check`
+- Mobile unit gate: `just mobile-test`
+- Cross-project gate: `just check`
