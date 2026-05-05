@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Compare openapi.json (just-pulled) against openapi.snapshot.json.
 // Exits 1 if they differ. Run after openapi-pull.mjs.
 //
@@ -66,7 +66,7 @@ function main() {
     );
   }
   process.stderr.write(
-    "If this drift is intentional, run `npm run openapi:snapshot` and commit the updated openapi.snapshot.json.\n"
+    "If this drift is intentional, run `bun run openapi:snapshot` and commit the updated openapi.snapshot.json.\n"
   );
   process.exit(1);
 }

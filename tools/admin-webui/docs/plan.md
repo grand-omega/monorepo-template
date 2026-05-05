@@ -203,7 +203,7 @@ Use this everywhere. No raw `fetch` calls in the codebase except inside `client.
 # package.json scripts
 "openapi:fetch": "curl -fsSL ${API_URL:-http://localhost:8080}/openapi.json -o openapi.json"
 "openapi:gen":   "openapi-typescript openapi.json -o src/api/schema.ts"
-"openapi":       "npm run openapi:fetch && npm run openapi:gen"
+"openapi":       "bun run openapi:fetch && bun run openapi:gen"
 ```
 
 `openapi.json` and `src/api/schema.ts` are **gitignored**. CI runs `openapi:gen` against a checked-in `openapi.snapshot.json` (committed when the contract changes intentionally). A drift-check job in CI fetches the live spec from a deployed backend and diffs against the snapshot — fail if they diverge without a corresponding PR.
@@ -272,12 +272,12 @@ Playwright must cover, at minimum:
 Backend's `Dockerfile` becomes multi-stage:
 
 ```dockerfile
-FROM node:22-alpine AS frontend
+FROM oven/bun:1.3.13-alpine AS frontend
 WORKDIR /app
-COPY lab-rust-server-admin/package*.json ./
-RUN npm ci
+COPY lab-rust-server-admin/package.json lab-rust-server-admin/bun.lock ./
+RUN bun install --frozen-lockfile
 COPY lab-rust-server-admin/ ./
-RUN npm run build  # outputs dist/
+RUN bun run build  # outputs dist/
 
 FROM rust:1-bookworm AS backend
 # ... existing Rust build ...
@@ -316,7 +316,7 @@ The Rust backend serves `/admin/*` static assets via `tower_http::services::Serv
 - [ ] `target="_blank"` links include `rel="noopener noreferrer"`.
 - [ ] ESLint plugins `eslint-plugin-react`, `eslint-plugin-jsx-a11y`, `eslint-plugin-security` enabled.
 - [ ] No `eval`, no `new Function`, no `innerHTML`. Lint-enforced.
-- [ ] Bundle audit (`npm audit --audit-level=high`) clean in CI.
+- [ ] Dependency audit (`bun audit --audit-level=high`) clean in CI.
 - [ ] Subresource integrity if any CDN — but you shouldn't have any.
 
 ## 14. Roadmap (deliverable order)

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Fetch the live /openapi.json from a backend, strip the /admin/api prefix
 // from path keys (so it matches the SPA client baseUrl), and write to
 // openapi.json. The snapshot is updated separately via openapi-snapshot.mjs.
