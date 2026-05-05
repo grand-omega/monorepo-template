@@ -55,6 +55,9 @@ just mobile-test
 
 The imported subprojects keep their own README files for stack-specific details.
 
+Project-level agent roles are documented in `docs/agents.md` and implemented as
+instructions under `.claude/agents/`.
+
 ## Artifact Ownership
 
 - The backend image is built with `backend/Dockerfile` from the repository root context so it can include the admin build.
