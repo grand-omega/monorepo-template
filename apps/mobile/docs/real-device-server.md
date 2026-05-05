@@ -15,16 +15,27 @@ On Android, `localhost` means the phone itself. If your server is running on you
 - use ADB reverse over USB, or
 - configure the app to use your computer's LAN IP.
 
-For day-to-day local development, use the helper script. It rebuilds the app,
-restores ADB reverse, reinstalls the APK, and launches the app:
+For day-to-day local development, the debug app points at the development
+machine's LAN IP:
+
+```text
+http://192.168.1.15:8080
+```
+
+The helper script rebuilds the app, reinstalls the APK, and launches it:
 
 ```bash
 apps/mobile/scripts/dev-phone.sh
 ```
 
-ADB reverse can disappear after unplugging the phone, restarting ADB, rebooting
-the phone, or reconnecting the device, so rerun this script whenever the login
-screen unexpectedly says `Server offline`.
+If your computer's LAN IP changes, rebuild with an override:
+
+```bash
+DEV_API_BASE_URL=http://YOUR_PC_IP:8080 apps/mobile/scripts/dev-phone.sh
+```
+
+Use ADB reverse only as a fallback when the phone and development machine cannot
+be placed on the same LAN.
 
 ## USB Workflow
 
@@ -50,7 +61,8 @@ Connect the phone and run:
 apps/mobile/scripts/dev-phone.sh
 ```
 
-The manual commands below are useful when debugging the connection.
+The manual ADB reverse commands below are useful only when debugging the old
+localhost-over-USB connection.
 
 Confirm ADB sees the phone:
 

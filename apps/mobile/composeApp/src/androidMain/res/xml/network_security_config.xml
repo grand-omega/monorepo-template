@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext only for localhost (used with `adb reverse tcp:8080 tcp:8080`). -->
+    <!-- Allow cleartext only for localhost-style development hosts. Debug builds
+         overlay this file to allow LAN HTTP API testing. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">10.0.2.2</domain>

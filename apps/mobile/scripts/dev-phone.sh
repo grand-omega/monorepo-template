@@ -37,10 +37,6 @@ if [[ -z "${JAVA_HOME:-}" || ! -x "${JAVA_HOME:-}/bin/java" ]]; then
 fi
 ./gradlew :composeApp:assembleDebug
 
-echo "Restoring localhost:8080 -> development machine:8080..."
-"${adb_for_device[@]}" reverse tcp:8080 tcp:8080 >/dev/null
-"${adb_for_device[@]}" reverse --list
-
 echo "Installing APK..."
 "${adb_for_device[@]}" install -r -t "$APK"
 

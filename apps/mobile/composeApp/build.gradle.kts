@@ -1,6 +1,9 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+val devApiBaseUrl = providers.environmentVariable("DEV_API_BASE_URL")
+    .orElse("http://192.168.1.15:8080")
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
@@ -123,7 +126,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "API_BASE_URL", "\"http://localhost:8080\"")
+            buildConfigField("String", "API_BASE_URL", "\"${devApiBaseUrl.get()}\"")
         }
         release {
             isMinifyEnabled = false
