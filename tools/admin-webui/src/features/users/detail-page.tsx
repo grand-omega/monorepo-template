@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { ArrowLeft, ShieldAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "@/api/client";
@@ -8,6 +9,15 @@ import { queryKeys } from "@/api/queries";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Time } from "@/components/time";
 import { useToast } from "@/components/toast";
+import {
+  Badge,
+  Button,
+  Panel,
+  SkeletonLine,
+  StatusMessage,
+  Textarea,
+  buttonClassName,
+} from "@/components/ui";
 import { SessionsList } from "@/features/users/sessions-list";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 import { formatOptionalDateTime, formatRole } from "@/lib/format";
@@ -34,18 +44,14 @@ export function UserDetailPage() {
     return (
       <main className="mx-auto max-w-6xl px-4 py-6">
         <Link
-          className="text-sm text-zinc-600 hover:text-zinc-950"
+          className={buttonClassName({ variant: "ghost" })}
           search={{ q: undefined, cursor: undefined, limit: 50 }}
           to="/users"
         >
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Back to users
         </Link>
-        <div
-          className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-          role="alert"
-        >
-          {apiErrorMessage(user.error)}
-        </div>
+        <StatusMessage className="mt-4">{apiErrorMessage(user.error)}</StatusMessage>
       </main>
     );
   }
@@ -59,25 +65,30 @@ function UserDetailContent({ user }: { user: ManagedUser }) {
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
       <Link
-        className="text-sm text-zinc-600 hover:text-zinc-950"
+        className={buttonClassName({ variant: "ghost" })}
         search={{ q: undefined, cursor: undefined, limit: 50 }}
         to="/users"
       >
+        <ArrowLeft className="size-4" aria-hidden="true" />
         Back to users
       </Link>
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px]">
         <div>
-          <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+          <Panel className="p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-2xl font-semibold">{user.email}</h1>
                 {user.display_name ? (
                   <p className="mt-1 text-sm text-zinc-600">{user.display_name}</p>
                 ) : null}
               </div>
-              <span className="w-fit rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700 capitalize">
-                {formatRole(user.role)}
-              </span>
+              <div className="flex flex-wrap gap-2">
+                <Badge>{formatRole(user.role)}</Badge>
+                <Badge tone={user.email_verified ? "success" : "warning"}>
+                  {user.email_verified ? "Verified" : "Unverified"}
+                </Badge>
+                {user.locked_until ? <Badge tone="danger">Locked</Badge> : null}
+              </div>
             </div>
 
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -92,7 +103,7 @@ function UserDetailContent({ user }: { user: ManagedUser }) {
                 <Time value={user.last_login_at} />
               </Field>
             </dl>
-          </section>
+          </Panel>
 
           <SessionsList userId={user.id} />
         </div>
@@ -206,47 +217,37 @@ function UserActions({ user }: { user: ManagedUser }) {
   const error = lock.error ?? unlock.error ?? verify.error ?? revoke.error;
 
   return (
-    <aside className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-semibold">Actions</h2>
-      <p className="mt-1 text-sm text-zinc-600">Confirm each action for {user.email}.</p>
-      {error ? (
-        <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-          {apiErrorMessage(error)}
-        </p>
-      ) : null}
+    <aside className="h-fit rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="grid size-9 shrink-0 place-items-center rounded-md border border-amber-200 bg-amber-50 text-amber-800">
+          <ShieldAlert className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">Actions</h2>
+          <p className="mt-1 text-sm text-zinc-600">Confirm each action for {user.email}.</p>
+        </div>
+      </div>
+      {error ? <StatusMessage className="mt-3">{apiErrorMessage(error)}</StatusMessage> : null}
       <div className="mt-4 grid gap-2">
         {user.locked_until ? (
-          <button
-            className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
-            onClick={() => setDialog("unlock")}
-            type="button"
-          >
+          <Button onClick={() => setDialog("unlock")} variant="primary">
             Unlock user
-          </button>
+          </Button>
         ) : (
-          <button
-            className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
-            onClick={() => setDialog("lock")}
-            type="button"
-          >
+          <Button onClick={() => setDialog("lock")} variant="danger">
             Lock user
-          </button>
+          </Button>
         )}
-        <button
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        <Button
           disabled={user.email_verified}
           onClick={() => setDialog("verify")}
-          type="button"
+          variant="secondary"
         >
           Verify email
-        </button>
-        <button
-          className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
-          onClick={() => setDialog("revoke")}
-          type="button"
-        >
+        </Button>
+        <Button onClick={() => setDialog("revoke")} variant="secondary">
           Revoke sessions
-        </button>
+        </Button>
       </div>
 
       <ConfirmDialog
@@ -258,10 +259,11 @@ function UserActions({ user }: { user: ManagedUser }) {
         open={dialog === "lock"}
         title="Lock user"
       >
-        <label className="block text-sm font-medium text-zinc-800">
+        <label className="block text-sm font-medium text-zinc-800" htmlFor="lock-reason">
           Reason
-          <textarea
-            className="mt-1 min-h-24 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+          <Textarea
+            className="mt-1 min-h-24"
+            id="lock-reason"
             onChange={(event) => setReason(event.target.value)}
             value={reason}
           />
@@ -331,10 +333,10 @@ function useOptimisticUserAction(
 function UserDetailSkeleton() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
-      <div className="h-5 w-24 animate-pulse rounded bg-zinc-200" />
+      <SkeletonLine className="h-5 w-24" />
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="h-72 animate-pulse rounded-lg bg-zinc-200" />
-        <div className="h-64 animate-pulse rounded-lg bg-zinc-200" />
+        <SkeletonLine className="h-72 rounded-lg" />
+        <SkeletonLine className="h-64 rounded-lg" />
       </div>
     </main>
   );

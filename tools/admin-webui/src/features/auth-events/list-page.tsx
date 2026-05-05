@@ -5,6 +5,20 @@ import { useState } from "react";
 import { api } from "@/api/client";
 import type { components } from "@/api/schema";
 import { Time } from "@/components/time";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Input,
+  PageHeader,
+  Panel,
+  SkeletonLine,
+  StatusMessage,
+  Table,
+  TableCell,
+  TableHead,
+  TableHeaderCell,
+} from "@/components/ui";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 import { Route } from "@/routes/_authenticated/auth-events";
 
@@ -40,10 +54,7 @@ export function AuthEventsListPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Auth events</h1>
-        <p className="mt-2 text-sm text-zinc-600">Review authentication and admin audit events.</p>
-      </div>
+      <PageHeader description="Review authentication and admin audit events." title="Auth events" />
 
       <form
         className="mt-6 grid gap-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto_auto]"
@@ -59,30 +70,32 @@ export function AuthEventsListPage() {
           });
         }}
       >
-        <label className="block text-sm font-medium text-zinc-800">
+        <label className="block text-sm font-medium text-zinc-800" htmlFor="event-type">
           Event type
-          <input
-            className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+          <Input
+            className="mt-1"
             data-search-input="true"
+            id="event-type"
             onChange={(event) => setEventType(event.target.value)}
             placeholder="admin_login_success"
             value={eventType}
           />
         </label>
-        <label className="block text-sm font-medium text-zinc-800">
+        <label className="block text-sm font-medium text-zinc-800" htmlFor="event-user-id">
           User ID
-          <input
-            className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+          <Input
+            className="mt-1"
+            id="event-user-id"
             onChange={(event) => setUserId(event.target.value)}
             placeholder="UUID"
             value={userId}
           />
         </label>
-        <button className="self-end rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white">
+        <Button className="self-end" type="submit" variant="primary">
           Filter
-        </button>
-        <button
-          className="self-end rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
+        </Button>
+        <Button
+          className="self-end"
           onClick={() => {
             setEventType("");
             setUserId("");
@@ -95,29 +108,26 @@ export function AuthEventsListPage() {
               },
             });
           }}
-          type="button"
+          variant="secondary"
         >
           Clear
-        </button>
+        </Button>
       </form>
 
-      <section className="mt-6 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <Panel className="mt-6 overflow-hidden">
         {events.isLoading ? <EventsSkeleton /> : null}
         {events.error ? (
-          <div className="p-4 text-sm text-red-800" role="alert">
-            {apiErrorMessage(events.error)}
-          </div>
+          <StatusMessage className="m-4">{apiErrorMessage(events.error)}</StatusMessage>
         ) : null}
         {events.isSuccess && items.length === 0 ? (
-          <div className="p-8 text-center">
-            <h2 className="text-base font-semibold">No auth events found</h2>
-            <p className="mt-2 text-sm text-zinc-600">Adjust the filters and try again.</p>
-          </div>
+          <EmptyState title="No auth events found">
+            <p>Adjust the filters and try again.</p>
+          </EmptyState>
         ) : null}
         {events.isSuccess && items.length > 0 ? (
           <EventsTable events={items} onSelect={setSelected} />
         ) : null}
-      </section>
+      </Panel>
 
       <div className="mt-4 flex items-center justify-between">
         <p className="text-sm text-zinc-600">
@@ -125,8 +135,7 @@ export function AuthEventsListPage() {
         </p>
         <div className="flex gap-2">
           {search.cursor ? (
-            <button
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
+            <Button
               onClick={() =>
                 void navigate({
                   search: {
@@ -137,13 +146,12 @@ export function AuthEventsListPage() {
                   },
                 })
               }
-              type="button"
+              variant="secondary"
             >
               First page
-            </button>
+            </Button>
           ) : null}
-          <button
-            className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          <Button
             disabled={!nextCursor}
             onClick={() =>
               void navigate({
@@ -155,10 +163,10 @@ export function AuthEventsListPage() {
                 },
               })
             }
-            type="button"
+            variant="primary"
           >
             Next page
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -176,40 +184,40 @@ function EventsTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] border-collapse text-left text-sm">
-        <thead className="bg-zinc-50 text-xs text-zinc-500 uppercase">
+      <Table className="min-w-[820px]">
+        <TableHead>
           <tr>
-            <th className="px-4 py-3 font-medium">Created</th>
-            <th className="px-4 py-3 font-medium">Event type</th>
-            <th className="px-4 py-3 font-medium">User</th>
-            <th className="px-4 py-3 font-medium">IP</th>
-            <th className="px-4 py-3 font-medium">Details</th>
+            <TableHeaderCell>Created</TableHeaderCell>
+            <TableHeaderCell>Event type</TableHeaderCell>
+            <TableHeaderCell>User</TableHeaderCell>
+            <TableHeaderCell>IP</TableHeaderCell>
+            <TableHeaderCell>Details</TableHeaderCell>
           </tr>
-        </thead>
+        </TableHead>
         <tbody className="divide-y divide-zinc-200">
           {events.map((event) => (
-            <tr key={event.id} className="hover:bg-zinc-50">
-              <td className="px-4 py-3">
+            <tr key={event.id} className="transition-colors hover:bg-zinc-50">
+              <TableCell>
                 <Time value={event.created_at} />
-              </td>
-              <td className="px-4 py-3 font-medium">{event.event_type}</td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
+                <Badge tone={event.event_type.includes("fail") ? "danger" : "info"}>
+                  {event.event_type}
+                </Badge>
+              </TableCell>
+              <TableCell>
                 <span>{event.user_email ?? event.user_id ?? "Unknown"}</span>
-              </td>
-              <td className="px-4 py-3">{event.ip ?? "Unknown"}</td>
-              <td className="px-4 py-3">
-                <button
-                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-700"
-                  onClick={() => onSelect(event)}
-                  type="button"
-                >
+              </TableCell>
+              <TableCell>{event.ip ?? "Unknown"}</TableCell>
+              <TableCell>
+                <Button onClick={() => onSelect(event)} size="sm" variant="secondary">
                   View
-                </button>
-              </td>
+                </Button>
+              </TableCell>
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }
@@ -221,19 +229,16 @@ function EventDetailDrawer({ event, onClose }: { event: AuthEvent | null; onClos
     <div className="fixed inset-0 z-50 bg-black/30" role="presentation">
       <aside
         aria-label="Auth event detail"
-        className="ml-auto h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-xl"
+        className="ml-auto h-full w-full max-w-xl overflow-y-auto border-l border-zinc-200 bg-white p-6 shadow-xl"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">{event.event_type}</h2>
             <p className="mt-1 text-sm text-zinc-600">{event.id}</p>
           </div>
-          <button
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
-            onClick={onClose}
-          >
+          <Button onClick={onClose} variant="secondary">
             Close
-          </button>
+          </Button>
         </div>
         <dl className="mt-6 grid gap-4">
           <Detail label="Created">
@@ -243,7 +248,7 @@ function EventDetailDrawer({ event, onClose }: { event: AuthEvent | null; onClos
           <Detail label="IP" value={event.ip ?? "Unknown"} />
           <Detail label="User agent" value={event.user_agent ?? "Unknown"} />
           <Detail label="Detail JSON">
-            <pre className="overflow-x-auto rounded-md bg-zinc-950 p-3 text-xs text-white">
+            <pre className="overflow-x-auto rounded-md border border-zinc-800 bg-zinc-950 p-3 text-xs text-white">
               {JSON.stringify(event.detail ?? null, null, 2)}
             </pre>
           </Detail>
@@ -274,7 +279,7 @@ function EventsSkeleton() {
   return (
     <div className="space-y-3 p-4" aria-label="Loading auth events">
       {Array.from({ length: 8 }).map((_, index) => (
-        <div className="h-10 animate-pulse rounded-md bg-zinc-200" key={index} />
+        <SkeletonLine className="h-10" key={index} />
       ))}
     </div>
   );

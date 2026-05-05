@@ -2,10 +2,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
+import { LockKeyhole } from "lucide-react";
 import { z } from "zod";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queries";
 import { useToast } from "@/components/toast";
+import { Button, Input, Panel, StatusMessage } from "@/components/ui";
 import { queryClient } from "@/router";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 
@@ -57,20 +59,28 @@ export function LoginPage() {
   });
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-stone-50 px-4 text-zinc-950">
-      <section className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Admin login</h1>
-        <p className="mt-2 text-sm text-zinc-600">Sign in with an admin account.</p>
+    <main className="grid min-h-dvh place-items-center bg-zinc-50 px-4 text-zinc-950">
+      <Panel className="w-full max-w-sm p-6">
+        <div className="flex items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-md border border-zinc-200 bg-zinc-100 text-zinc-700">
+            <LockKeyhole className="size-4" aria-hidden="true" />
+          </span>
+          <div>
+            <h1 className="text-xl font-semibold">Admin login</h1>
+            <p className="mt-1 text-sm text-zinc-600">Sign in with an admin account.</p>
+          </div>
+        </div>
         <form
           className="mt-6 space-y-4"
           onSubmit={form.handleSubmit((values) => login.mutate(values))}
         >
-          <label className="block text-sm font-medium text-zinc-800">
+          <label className="block text-sm font-medium text-zinc-800" htmlFor="login-email">
             Email
-            <input
+            <Input
               autoComplete="email"
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="mt-1"
               data-search-input="true"
+              id="login-email"
               type="email"
               {...form.register("email")}
             />
@@ -79,11 +89,12 @@ export function LoginPage() {
             <p className="text-sm text-red-700">{form.formState.errors.email.message}</p>
           ) : null}
 
-          <label className="block text-sm font-medium text-zinc-800">
+          <label className="block text-sm font-medium text-zinc-800" htmlFor="login-password">
             Password
-            <input
+            <Input
               autoComplete="current-password"
-              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="mt-1"
+              id="login-password"
               type="password"
               {...form.register("password")}
             />
@@ -93,20 +104,14 @@ export function LoginPage() {
           ) : null}
 
           {form.formState.errors.root ? (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-              {form.formState.errors.root.message}
-            </p>
+            <StatusMessage>{form.formState.errors.root.message}</StatusMessage>
           ) : null}
 
-          <button
-            className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={login.isPending}
-            type="submit"
-          >
+          <Button className="w-full" disabled={login.isPending} type="submit" variant="primary">
             {login.isPending ? "Signing in..." : "Sign in"}
-          </button>
+          </Button>
         </form>
-      </section>
+      </Panel>
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button, Panel } from "@/components/ui";
 
 interface ConfirmDialogProps {
   children?: ReactNode;
@@ -30,30 +31,25 @@ export function ConfirmDialog({
       className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4"
       role="dialog"
     >
-      <section className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-5 shadow-lg">
+      <Panel className="w-full max-w-md p-5 shadow-lg">
         <h2 className="text-lg font-semibold" id="confirm-dialog-title">
           {title}
         </h2>
         <p className="mt-2 text-sm text-zinc-600">{description}</p>
         {children ? <div className="mt-4">{children}</div> : null}
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
-            onClick={onCancel}
-            type="button"
-          >
+          <Button onClick={onCancel} variant="secondary">
             Cancel
-          </button>
-          <button
-            className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          </Button>
+          <Button
             disabled={disabled}
             onClick={onConfirm}
-            type="button"
+            variant={title === "Lock user" ? "danger" : "primary"}
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
-      </section>
+      </Panel>
     </div>
   );
 }

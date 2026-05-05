@@ -1,10 +1,12 @@
 import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { LogOut, ShieldCheck, Users } from "lucide-react";
 import { api } from "@/api/client";
 import { useToast } from "@/components/toast";
 import { meQueryOptions } from "@/api/queries";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
+import { Button, SkeletonLine, buttonClassName } from "@/components/ui";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
@@ -103,38 +105,40 @@ function AuthenticatedLayout() {
   });
 
   return (
-    <div className="min-h-dvh bg-stone-50 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold">lab-rust-server admin</p>
-            <p className="text-xs text-zinc-500">{session.email}</p>
+    <div className="min-h-dvh bg-zinc-50 text-zinc-950">
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-normal">lab-rust-server admin</p>
+            <p className="truncate text-xs text-zinc-500">{session.email}</p>
           </div>
-          <nav aria-label="Admin navigation" className="flex items-center gap-2 text-sm">
+          <nav aria-label="Admin navigation" className="flex flex-wrap items-center gap-2">
             <Link
-              activeProps={{ className: "bg-zinc-900 text-white" }}
-              className="rounded-md px-3 py-2 text-zinc-700 hover:bg-zinc-100"
+              activeProps={{
+                className: "border-zinc-950 bg-zinc-950 text-white hover:bg-zinc-900",
+              }}
+              className={buttonClassName({ variant: "ghost" })}
               search={{ q: undefined, cursor: undefined, limit: 50 }}
               to="/users"
             >
+              <Users className="size-4" aria-hidden="true" />
               Users
             </Link>
             <Link
-              activeProps={{ className: "bg-zinc-900 text-white" }}
-              className="rounded-md px-3 py-2 text-zinc-700 hover:bg-zinc-100"
+              activeProps={{
+                className: "border-zinc-950 bg-zinc-950 text-white hover:bg-zinc-900",
+              }}
+              className={buttonClassName({ variant: "ghost" })}
               search={{ cursor: undefined, event_type: undefined, limit: 100, user_id: undefined }}
               to="/auth-events"
             >
+              <ShieldCheck className="size-4" aria-hidden="true" />
               Auth events
             </Link>
-            <button
-              className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={logout.isPending}
-              onClick={() => logout.mutate()}
-              type="button"
-            >
+            <Button disabled={logout.isPending} onClick={() => logout.mutate()} variant="secondary">
+              <LogOut className="size-4" aria-hidden="true" />
               {logout.isPending ? "Signing out..." : "Sign out"}
-            </button>
+            </Button>
           </nav>
         </div>
         {logout.error ? (
@@ -150,10 +154,10 @@ function AuthenticatedLayout() {
 
 function AuthenticatedSkeleton() {
   return (
-    <main className="min-h-dvh bg-stone-50 px-4 py-6">
+    <main className="min-h-dvh bg-zinc-50 px-4 py-6">
       <div className="mx-auto max-w-6xl space-y-4">
-        <div className="h-10 w-64 animate-pulse rounded-md bg-zinc-200" />
-        <div className="h-40 animate-pulse rounded-lg bg-zinc-200" />
+        <SkeletonLine className="h-10 w-64" />
+        <SkeletonLine className="h-40 rounded-lg" />
       </div>
     </main>
   );

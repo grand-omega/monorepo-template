@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       >
         {toasts.map((toast) => (
           <div
-            className="rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white shadow-lg"
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white shadow-lg shadow-zinc-950/10"
             key={toast.id}
             role="status"
           >
