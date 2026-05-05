@@ -18,17 +18,21 @@ backend-check:
 
 # Admin web UI development server.
 admin-dev:
-    cd tools/admin-webui && bun run dev
+    cd apps/admin && bun run dev
 
 admin-check:
-    cd tools/admin-webui && bun run openapi:gen && bun run lint && bun run typecheck && bun run test && bun run build
+    cd apps/admin && bun run openapi:gen && bun run lint && bun run typecheck && bun run test && bun run build
 
-# Android unit tests.
-android-test:
-    cd apps/android && JAVA_HOME="{{android_java_home}}" ./gradlew :composeApp:testDebugUnitTest
+# Mobile unit tests.
+mobile-test:
+    cd apps/mobile && JAVA_HOME="{{android_java_home}}" ./gradlew :composeApp:testDebugUnitTest
 
-android-debug:
-    cd apps/android && JAVA_HOME="{{android_java_home}}" ./gradlew :composeApp:assembleDebug
+mobile-debug:
+    cd apps/mobile && JAVA_HOME="{{android_java_home}}" ./gradlew :composeApp:assembleDebug
+
+android-test: mobile-test
+
+android-debug: mobile-debug
 
 # Cross-project local gate.
-check: backend-check admin-check android-test
+check: backend-check admin-check mobile-test

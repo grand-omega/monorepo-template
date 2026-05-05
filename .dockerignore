@@ -1,0 +1,16 @@
+.git
+.env
+.env.*
+!.env.example
+
+backend/target
+apps/admin/node_modules
+apps/admin/dist
+apps/admin/coverage
+apps/mobile/.gradle
+apps/mobile/build
+apps/mobile/composeApp/build
+
+**/*.log
+**/.DS_Store
+**/local.properties

@@ -1,4 +1,4 @@
-# template-rust-server
+# Backend
 
 A production-leaning Rust authentication server template (Axum 0.8): registration,
 login, JWT (Ed25519) access tokens, refresh-token rotation with reuse detection,

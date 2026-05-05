@@ -6,7 +6,7 @@ Append entries when you make a non-obvious call. Newest on top. Keep entries sho
 
 - **Bun is the only project package manager.** `package.json` pins `bun@1.3.13`, the root lockfile is `bun.lock`, and first-party scripts/docs/CI avoid npm/npx/yarn/pnpm commands.
 - **Playwright uses the installed Chrome channel.** Playwright 1.59.1 cannot install its bundled Chromium on this Ubuntu 26.04 host, so local e2e runs against system Chrome. CI should either provide Chrome or switch this decision when the runner image changes.
-- **Backend pairing is `../rust-server-template` in this workspace.** The admin UI proxies `/admin/api/*` to `VITE_API_URL`, defaulting to `http://localhost:8080`; run the backend with `just keys` then `just dev` before using protected routes locally.
+- **Backend pairing is `../../backend` in this monorepo.** The admin UI proxies `/admin/api/*` to `VITE_API_URL`, defaulting to `http://localhost:8080`; run the backend with `just keys` then `just dev` before using protected routes locally.
 - **Admin passkeys are now in scope.** The backend exposes WebAuthn admin endpoints, and the SPA has a Passkeys route plus login-step handling for `webauthn_required`.
 - **`/me` query rejects empty proxy responses explicitly.** When the backend is down, Vite may return a non-JSON proxy failure; `meQueryOptions` now throws a request/session error instead of letting React Query fail with `["me"] data is undefined`.
 

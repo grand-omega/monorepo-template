@@ -17,6 +17,7 @@ use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::request_id::{PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
@@ -58,6 +59,14 @@ pub fn build_router(state: AppState) -> Router {
                 let doc = openapi_doc.clone();
                 move || async move { axum::Json(doc) }
             }),
+        );
+    }
+
+    if let Some(admin_ui_dir) = state.config.admin_ui_dir.as_deref() {
+        let index = std::path::Path::new(admin_ui_dir).join("index.html");
+        router = router.nest_service(
+            "/admin",
+            ServeDir::new(admin_ui_dir).not_found_service(ServeFile::new(index)),
         );
     }
 

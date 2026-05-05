@@ -1,6 +1,13 @@
 # syntax=docker/dockerfile:1.7
 ARG RUST_VERSION=1.95
 
+FROM oven/bun:1.3.13-slim AS admin-builder
+WORKDIR /app/apps/admin
+COPY apps/admin/package.json apps/admin/bun.lock ./
+RUN bun install --frozen-lockfile
+COPY apps/admin/ ./
+RUN bun run openapi:gen && bun run build
+
 FROM lukemathwalker/cargo-chef:latest-rust-${RUST_VERSION}-slim AS chef
 # `curl` is required at build time by utoipa-swagger-ui's build.rs to fetch
 # Swagger UI assets. `pkg-config` + libssl-dev are kept in case any future
@@ -11,13 +18,13 @@ RUN apt-get update \
 WORKDIR /app
 
 FROM chef AS planner
-COPY . .
+COPY backend/ .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
-COPY . .
+COPY backend/ .
 ENV SQLX_OFFLINE=true
 RUN cargo build --release --bin lab-rust-server
 RUN strip target/release/lab-rust-server
@@ -30,6 +37,7 @@ RUN useradd -r -u 10001 -g nogroup app
 WORKDIR /app
 COPY --from=builder /app/target/release/lab-rust-server /usr/local/bin/lab-rust-server
 COPY --from=builder /app/migrations ./migrations
+COPY --from=admin-builder /app/apps/admin/dist ./admin-dist
 USER 10001
 EXPOSE 8080 9090
 ENTRYPOINT ["/usr/bin/tini", "--", "lab-rust-server"]

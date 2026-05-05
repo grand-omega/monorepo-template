@@ -1,4 +1,5 @@
-# Root compose entrypoint delegates to the backend development stack for now.
-# Follow-up work can lift services here once admin UI serving is integrated.
+# Root compose entrypoint delegates to the backend development stack.
+# The backend image build uses the repository root context so it can include
+# the admin SPA from apps/admin.
 include:
   - backend/docker-compose.yml

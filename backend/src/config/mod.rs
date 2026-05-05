@@ -13,6 +13,8 @@ pub struct Config {
     pub bind_addr: SocketAddr,
     pub metrics_bind_addr: SocketAddr,
     pub public_base_url: Url,
+    #[serde(default)]
+    pub admin_ui_dir: Option<String>,
 
     pub database_url: String,
     pub database_max_connections: u32,
@@ -148,6 +150,13 @@ impl Config {
         }
         if !self.public_base_url.has_host() {
             anyhow::bail!("public_base_url must be absolute (include a host)");
+        }
+        if self
+            .admin_ui_dir
+            .as_deref()
+            .is_some_and(|dir| dir.trim().is_empty())
+        {
+            anyhow::bail!("admin_ui_dir must not be empty when set");
         }
 
         if self.webauthn_rp_id.trim().is_empty() {

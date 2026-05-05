@@ -13,8 +13,9 @@ just check
 just test-integration
 ```
 
-CI runs the same checks in `.github/workflows/ci.yml`. Integration tests require
-Docker because they use real Postgres and Redis through testcontainers.
+CI runs the backend checks in the root `.github/workflows/backend-ci.yml`.
+Integration tests require Docker because they use real Postgres and Redis
+through testcontainers.
 
 ## Configuration
 
@@ -32,6 +33,9 @@ Required production decisions:
 - `APP_ALLOW_NOOP_MAILER=false` is enforced in `prod`.
 - `APP_PUBLIC_BASE_URL` must be the public HTTPS API base URL used in
   verification and password-reset emails.
+- `APP_ADMIN_UI_DIR` should point at the built admin SPA directory when the
+  backend should serve `/admin/*`. The production Docker image copies it to
+  `/app/admin-dist`.
 - `APP_WEBAUTHN_RP_ID` should be the bare host of the admin SPA, for example
   `admin.example.com`.
 - `APP_WEBAUTHN_RP_ORIGIN` must exactly match the admin SPA origin that calls

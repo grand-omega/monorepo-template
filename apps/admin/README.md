@@ -1,6 +1,6 @@
-# lab-rust-server-admin
+# Admin Web UI
 
-React SPA management interface for the Rust backend at [`../rust-server-template`](../rust-server-template). Served from `/admin/*` by the backend in production. See [`docs/plan.md`](docs/plan.md) for the full plan; this README is the quickstart.
+React SPA management interface for the Rust backend in this monorepo. It runs as a Vite dev server locally and is copied into the backend Docker image for production, where the backend serves it from `/admin/*`.
 
 ## Quickstart
 
@@ -15,7 +15,7 @@ Open http://localhost:5173/admin/. The dev server proxies `/admin/api/*` to `VIT
 If the admin UI shows a `/me` or proxy error, start the backend first:
 
 ```bash
-cd ../rust-server-template
+cd ../../backend
 just keys
 just dev
 ```
@@ -62,4 +62,4 @@ See `docs/plan.md` §2 for the locked stack and §16 for coding conventions.
 
 ## Deploy
 
-The backend repo's multi-stage Dockerfile copies `dist/` into the Rust container, which serves it from `/admin/*` via `tower_http::services::ServeDir`. See `docs/plan.md` §11.
+The backend Dockerfile builds this app, copies `dist/` into the runtime image, and serves it when `APP_ADMIN_UI_DIR` points at that directory.

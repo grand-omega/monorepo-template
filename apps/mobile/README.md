@@ -1,6 +1,6 @@
-# AppName KMP Auth Starter
+# Mobile App
 
-Kotlin Multiplatform auth starter for Android first, with shared Compose UI and shared domain/data layers. The app targets the Lab Rust Server auth API and defaults to `http://localhost:8080` in debug builds.
+Kotlin Multiplatform auth client for Android first, with shared Compose UI and shared domain/data layers. The app targets the backend auth API and defaults to `http://localhost:8080` in debug builds.
 
 ## Features
 

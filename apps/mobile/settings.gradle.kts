@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "template-kmp-app"
+rootProject.name = "mobile-app"
 include(":composeApp")

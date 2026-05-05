@@ -128,6 +128,7 @@ pub async fn spawn_app() -> TestApp {
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         metrics_bind_addr: "127.0.0.1:0".parse().unwrap(),
         public_base_url: Url::parse("http://test.invalid/").unwrap(),
+        admin_ui_dir: None,
         database_url,
         database_max_connections: 5,
         redis_url,

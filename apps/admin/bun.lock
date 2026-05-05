@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "lab-rust-server-admin",
+      "name": "monorepo-admin",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
         "@simplewebauthn/browser": "^13.3.0",
