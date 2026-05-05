@@ -12,6 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.kmpstarter.domain.User
 import com.example.kmpstarter.ui.screens.PlaceholderScreen
+import com.example.kmpstarter.ui.screens.login.LoginScreen
 
 /** Auth (signed-out) graph. */
 @Composable
@@ -42,9 +43,9 @@ fun AuthNavHost(
         modifier = modifier,
     ) {
         composable<AuthRoute.Login> {
-            PlaceholderScreen(
-                title = "Sign in",
-                body = "Login screen lands here in the next milestone.",
+            LoginScreen(
+                onNavigateToRegister = { navController.navigate(AuthRoute.Register) },
+                onNavigateToForgotPassword = { navController.navigate(AuthRoute.ForgotPassword) },
             )
         }
         composable<AuthRoute.Register> {

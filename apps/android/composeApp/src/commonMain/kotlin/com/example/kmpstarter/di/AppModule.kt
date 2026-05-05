@@ -6,7 +6,9 @@ import com.example.kmpstarter.data.network.AuthApi
 import com.example.kmpstarter.data.network.UserApi
 import com.example.kmpstarter.data.network.buildHttpClient
 import com.example.kmpstarter.data.user.UserRepository
+import com.example.kmpstarter.ui.screens.login.LoginViewModel
 import io.ktor.client.HttpClient
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -32,4 +34,6 @@ val appModule = module {
     }
     single { UserApi(get(named(AUTHED_HTTP_CLIENT))) }
     single { UserRepository(get(), get()) }
+
+    viewModelOf(::LoginViewModel)
 }
