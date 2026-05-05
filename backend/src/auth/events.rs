@@ -22,6 +22,14 @@ pub enum EventKind {
     PasswordResetRequested,
     PasswordResetCompleted,
     EmailVerified,
+    AdminLoginSuccess,
+    AdminLoginFailureWrongPassword,
+    AdminLoginFailureUnknownEmail,
+    AdminLoginBlockedLocked,
+    AdminUserLocked,
+    AdminUserUnlocked,
+    AdminEmailVerified,
+    AdminSessionsRevoked,
 }
 
 impl EventKind {
@@ -39,6 +47,14 @@ impl EventKind {
             EventKind::PasswordResetRequested => "password_reset_requested",
             EventKind::PasswordResetCompleted => "password_reset_completed",
             EventKind::EmailVerified => "email_verified",
+            EventKind::AdminLoginSuccess => "admin_login_success",
+            EventKind::AdminLoginFailureWrongPassword => "admin_login_failure_wrong_password",
+            EventKind::AdminLoginFailureUnknownEmail => "admin_login_failure_unknown_email",
+            EventKind::AdminLoginBlockedLocked => "admin_login_blocked_locked",
+            EventKind::AdminUserLocked => "admin_user_locked",
+            EventKind::AdminUserUnlocked => "admin_user_unlocked",
+            EventKind::AdminEmailVerified => "admin_email_verified",
+            EventKind::AdminSessionsRevoked => "admin_sessions_revoked",
         }
     }
 }

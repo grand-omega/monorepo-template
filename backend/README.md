@@ -30,6 +30,9 @@ The API listens on `:8080`, metrics on `:9090`, MailHog UI on `:8025`, Swagger U
 | PATCH | `/v1/me` | update display name |
 | DELETE | `/v1/me` | soft-delete; password required |
 | PATCH | `/v1/me/password` | revokes all other sessions |
+| GET | `/admin/login` | management login page for users with `role = 'admin'` |
+| GET | `/admin/users` | management user list |
+| GET | `/admin/auth-events` | recent auth/security events |
 | GET | `/healthz` | liveness |
 | GET | `/readyz` | readiness — pings DB and Redis with a 500 ms budget |
 | GET | `/metrics` | served on the metrics port (default `:9090`) |
@@ -47,6 +50,21 @@ curl -s -X POST http://localhost:8080/v1/auth/login \
 ```
 
 Verification emails land in MailHog at `http://localhost:8025`.
+
+### Management access
+
+The management UI is server-rendered at `http://localhost:8080/admin/login`.
+It uses a separate `HttpOnly` admin session cookie and only allows users with
+`role = 'admin'`.
+
+To promote your own account in development:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'you@example.test'::citext;
+```
+
+The first pass includes user search/inspection, lock/unlock, manual email
+verification, refresh-session revocation, and recent auth-event inspection.
 
 ## Configuration
 

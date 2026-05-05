@@ -10,7 +10,7 @@ pub fn normalize_email(email: &str) -> String {
 
 pub async fn find_by_email(executor: impl PgExecutor<'_>, email: &str) -> AppResult<Option<User>> {
     let row = sqlx::query_as::<_, User>(
-        r#"SELECT id, email::text as "email", email_verified, password_hash, display_name,
+        r#"SELECT id, email::text as "email", role, email_verified, password_hash, display_name,
                   created_at, updated_at, deleted_at, last_login_at,
                   failed_login_count, locked_until
            FROM users WHERE email = $1 AND deleted_at IS NULL"#,
@@ -23,7 +23,7 @@ pub async fn find_by_email(executor: impl PgExecutor<'_>, email: &str) -> AppRes
 
 pub async fn find_by_id(executor: impl PgExecutor<'_>, id: Uuid) -> AppResult<Option<User>> {
     let row = sqlx::query_as::<_, User>(
-        r#"SELECT id, email::text as "email", email_verified, password_hash, display_name,
+        r#"SELECT id, email::text as "email", role, email_verified, password_hash, display_name,
                   created_at, updated_at, deleted_at, last_login_at,
                   failed_login_count, locked_until
            FROM users WHERE id = $1 AND deleted_at IS NULL"#,
@@ -45,7 +45,7 @@ pub async fn insert(executor: impl PgExecutor<'_>, new_user: NewUser<'_>) -> App
     let row = sqlx::query_as::<_, User>(
         r#"INSERT INTO users (id, email, password_hash, display_name)
            VALUES ($1, $2::citext, $3, $4)
-           RETURNING id, email::text as "email", email_verified, password_hash, display_name,
+           RETURNING id, email::text as "email", role, email_verified, password_hash, display_name,
                      created_at, updated_at, deleted_at, last_login_at,
                      failed_login_count, locked_until"#,
     )
@@ -141,6 +141,35 @@ pub async fn soft_delete(executor: impl PgExecutor<'_>, id: Uuid) -> AppResult<(
            WHERE id = $1"#,
     )
     .bind(id)
+    .execute(executor)
+    .await?;
+    Ok(())
+}
+
+pub async fn clear_lock(executor: impl PgExecutor<'_>, id: Uuid) -> AppResult<()> {
+    sqlx::query(
+        r#"UPDATE users
+           SET locked_until = NULL, failed_login_count = 0, updated_at = now()
+           WHERE id = $1"#,
+    )
+    .bind(id)
+    .execute(executor)
+    .await?;
+    Ok(())
+}
+
+pub async fn lock_until(
+    executor: impl PgExecutor<'_>,
+    id: Uuid,
+    locked_until: DateTime<Utc>,
+) -> AppResult<()> {
+    sqlx::query(
+        r#"UPDATE users
+           SET locked_until = $2, updated_at = now()
+           WHERE id = $1"#,
+    )
+    .bind(id)
+    .bind(locked_until)
     .execute(executor)
     .await?;
     Ok(())

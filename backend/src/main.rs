@@ -168,19 +168,22 @@ fn spawn_cleanup_task(state: AppState) {
             let refresh = repo::delete_expired_refresh(&state.db, cutoff).await;
             let verify = repo::delete_expired_email_verification(&state.db, cutoff).await;
             let reset = repo::delete_expired_password_reset(&state.db, cutoff).await;
+            let admin_sessions =
+                lab_rust_server::admin::repo::delete_expired_sessions(&state.db, cutoff).await;
 
-            match (refresh, verify, reset) {
-                (Ok(r), Ok(v), Ok(p)) => {
-                    if r + v + p > 0 {
+            match (refresh, verify, reset, admin_sessions) {
+                (Ok(r), Ok(v), Ok(p), Ok(a)) => {
+                    if r + v + p + a > 0 {
                         info!(
                             refresh = r,
                             email_verification = v,
                             password_reset = p,
+                            admin_sessions = a,
                             "cleaned expired auth tokens"
                         );
                     }
                 }
-                (refresh, verify, reset) => {
+                (refresh, verify, reset, admin_sessions) => {
                     if let Err(e) = refresh {
                         error!(error = ?e, "refresh token cleanup failed");
                     }
@@ -189,6 +192,9 @@ fn spawn_cleanup_task(state: AppState) {
                     }
                     if let Err(e) = reset {
                         error!(error = ?e, "password reset cleanup failed");
+                    }
+                    if let Err(e) = admin_sessions {
+                        error!(error = ?e, "admin session cleanup failed");
                     }
                 }
             }

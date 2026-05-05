@@ -4,7 +4,7 @@ use crate::health;
 use crate::middleware::request_id::UuidV7RequestId;
 use crate::middleware::security_headers;
 use crate::openapi::ApiDoc;
-use crate::{auth, users};
+use crate::{admin, auth, users};
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderName, HeaderValue, Method, header};
@@ -24,6 +24,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 const X_REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
+const X_CSRF_TOKEN: HeaderName = HeaderName::from_static("x-csrf-token");
 
 pub fn build_router(state: AppState) -> Router {
     let cors = build_cors(&state);
@@ -33,17 +34,31 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/auth", auth::routes::router(state.clone()))
         .merge(users::routes::router(state.clone()));
 
+    let openapi_doc = ApiDoc::openapi();
     let mut router: Router<AppState> = Router::new()
         .route("/healthz", get(health::healthz))
         .route("/readyz", get(health::readyz))
+        .nest("/admin/api", admin::routes::router(state.clone()))
         .nest("/v1", app_routes)
         .layer(DefaultBodyLimit::max(body_limit));
 
+    // OpenAPI JSON is published in all environments — the SPA codegens against
+    // it; the schema isn't sensitive. In dev we additionally mount Swagger UI
+    // which carries its own JSON route, so we let SwaggerUi own /openapi.json
+    // there to avoid a duplicate registration.
     if state.config.env.is_dev() {
         let swagger: Router<AppState> = SwaggerUi::new("/docs")
-            .url("/openapi.json", ApiDoc::openapi())
+            .url("/openapi.json", openapi_doc)
             .into();
         router = router.merge(swagger);
+    } else {
+        router = router.route(
+            "/openapi.json",
+            get({
+                let doc = openapi_doc.clone();
+                move || async move { axum::Json(doc) }
+            }),
+        );
     }
 
     let middleware = ServiceBuilder::new()
@@ -75,7 +90,12 @@ fn build_cors(state: &AppState) -> CorsLayer {
     if state.config.cors_allowed_origins.is_empty() {
         CorsLayer::new()
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-            .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, X_REQUEST_ID])
+            .allow_headers([
+                header::AUTHORIZATION,
+                header::CONTENT_TYPE,
+                X_REQUEST_ID,
+                X_CSRF_TOKEN,
+            ])
     } else {
         let origins: Vec<HeaderValue> = state
             .config
@@ -86,7 +106,12 @@ fn build_cors(state: &AppState) -> CorsLayer {
         CorsLayer::new()
             .allow_origin(origins)
             .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
-            .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, X_REQUEST_ID])
+            .allow_headers([
+                header::AUTHORIZATION,
+                header::CONTENT_TYPE,
+                X_REQUEST_ID,
+                X_CSRF_TOKEN,
+            ])
             .allow_credentials(state.config.env == AppEnv::Prod)
     }
 }

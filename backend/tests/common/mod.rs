@@ -215,3 +215,24 @@ pub async fn force_verify_email(db: &PgPool, email: &str) {
         .await
         .expect("force-verify");
 }
+
+/// Promote a registered user to `role = 'admin'`.
+#[allow(dead_code)]
+pub async fn promote_to_admin(db: &PgPool, email: &str) {
+    sqlx::query("UPDATE users SET role = 'admin' WHERE email = $1::citext")
+        .bind(email)
+        .execute(db)
+        .await
+        .expect("promote-to-admin");
+}
+
+/// Demote an admin back to `role = 'user'`. Mid-session calls to /admin/api/me
+/// after this should return 401 because find_session re-checks the role.
+#[allow(dead_code)]
+pub async fn demote_admin(db: &PgPool, email: &str) {
+    sqlx::query("UPDATE users SET role = 'user' WHERE email = $1::citext")
+        .bind(email)
+        .execute(db)
+        .await
+        .expect("demote-admin");
+}
