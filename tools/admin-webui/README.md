@@ -42,6 +42,10 @@ The OpenAPI client is generated from the backend's `/openapi.json`. The flow:
 
 `openapi.json` and `src/api/schema.ts` are gitignored.
 
+## E2E credentials
+
+Login/logout E2E tests run against the real backend when `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are set. Without those variables, credential-backed tests are skipped while route/form tests still run.
+
 ## Stack
 
 Vite 5 · React 19 · TypeScript (strict + `noUncheckedIndexedAccess`) · TanStack Query v5 · TanStack Router · shadcn/ui · Tailwind CSS v4 · Zod · React Hook Form · openapi-fetch · date-fns · Vitest · Playwright · ESLint flat + typescript-eslint strict · Prettier.

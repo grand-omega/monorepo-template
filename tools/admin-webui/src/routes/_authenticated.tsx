@@ -1,26 +1,24 @@
 import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import { meQueryOptions } from "@/api/queries";
+import { ApiError, apiErrorMessage } from "@/lib/errors";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
-    const session = await context.queryClient.fetchQuery({
-      queryKey: ["me"],
-      queryFn: async () => {
-        const { data, error, response } = await api.GET("/me");
-        if (error) {
-          if (response.status === 401) {
-            throw redirect({
-              to: "/login",
-              search: { redirect: location.href },
-            });
-          }
-          throw new Error(error.message);
-        }
-        return data;
-      },
-    });
+    try {
+      const session = await context.queryClient.fetchQuery(meQueryOptions);
 
-    return { session };
+      return { session };
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        throw redirect({
+          to: "/login",
+          search: { redirect: location.href },
+        });
+      }
+      throw error;
+    }
   },
   component: AuthenticatedLayout,
   pendingComponent: AuthenticatedSkeleton,
@@ -28,6 +26,19 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const { session } = Route.useRouteContext();
+  const { queryClient } = Route.useRouteContext();
+  const navigate = Route.useNavigate();
+
+  const logout = useMutation({
+    mutationFn: async () => {
+      const { error, response } = await api.POST("/logout");
+      if (error) throw new ApiError(error, response);
+    },
+    onSuccess: async () => {
+      queryClient.clear();
+      await navigate({ to: "/login", search: { redirect: undefined } });
+    },
+  });
 
   return (
     <div className="min-h-dvh bg-stone-50 text-zinc-950">
@@ -52,8 +63,21 @@ function AuthenticatedLayout() {
             >
               Auth events
             </Link>
+            <button
+              className="rounded-md border border-zinc-300 px-3 py-2 text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate()}
+              type="button"
+            >
+              {logout.isPending ? "Signing out..." : "Sign out"}
+            </button>
           </nav>
         </div>
+        {logout.error ? (
+          <p className="mx-auto max-w-6xl px-4 pb-3 text-sm text-red-700" role="alert">
+            {apiErrorMessage(logout.error)}
+          </p>
+        ) : null}
       </header>
       <Outlet />
     </div>
