@@ -1,6 +1,10 @@
-# lab-rust-server
+# template-rust-server
 
-A production-leaning authentication & user-management API in Rust (Axum 0.8) — registration, login, JWT (Ed25519) access tokens, refresh-token rotation with reuse detection, email verification, password reset, and account management. Backed by PostgreSQL (sqlx) and Redis (rate limiting), with structured tracing and an OpenAPI / Swagger UI.
+A production-leaning Rust authentication server template (Axum 0.8): registration,
+login, JWT (Ed25519) access tokens, refresh-token rotation with reuse detection,
+email verification, password reset, account management, admin JSON API, and
+admin WebAuthn/passkeys. Backed by PostgreSQL (sqlx), Redis, structured
+tracing, and OpenAPI / Swagger UI.
 
 > Status: foundation. Auth and identity are done; product-specific endpoints are not. Read this as a starter kit, not a finished service.
 
@@ -11,7 +15,18 @@ just keys   # generate Ed25519 dev keys -> .env.local
 just dev    # docker compose up: postgres, redis, mailhog, app
 ```
 
-The API listens on `:8080`, metrics on `:9090`, MailHog UI on `:8025`, Swagger UI at `http://localhost:8080/docs` (dev only).
+The API listens on `:8080`, metrics on `:9090`, MailHog UI on `:8025`, Swagger UI at `http://localhost:8080/docs`.
+
+For a real phone on the same Wi-Fi, use your workstation LAN IP instead of
+`localhost`, for example `http://192.168.1.15:8080`. Android emulators usually
+use `http://10.0.2.2:8080`.
+
+## What This Provides
+
+This repo provides the backend auth/account API and admin API. It does not
+include the normal end-user web/mobile screens. A client app still needs to
+build the register, login, verify-email, forgot-password, reset-password,
+profile, and account-settings screens against the routes below.
 
 ## Routes
 
@@ -58,6 +73,11 @@ curl -s -X POST http://localhost:8080/v1/auth/login \
 ```
 
 Verification emails land in MailHog at `http://localhost:8025`.
+
+In dev, verification/reset links are generated from `APP_PUBLIC_BASE_URL`, but
+there is no user-facing `/verify` or `/reset-password` page in this repository.
+Client apps should extract the `token` query parameter from the email link and
+call `/v1/auth/verify-email` or `/v1/auth/password-reset/confirm`.
 
 ### Management access
 
@@ -123,6 +143,19 @@ All settings come from `APP_*` environment variables. Copy `.env.example` to `.e
 See `.env.example` for the full list with comments.
 Use `.env.production.example` as the production configuration inventory.
 
+## Environments
+
+The app distinguishes environments with `APP_ENV=dev | test | prod`.
+
+Development uses `docker-compose.yml`, MailHog, local Postgres/Redis, HTTP, and
+`APP_MIGRATE_ON_START=true`.
+
+Production should use `.env.production.example` as an inventory, store real
+values in a secret manager, run migrations as a controlled one-shot job, and put
+the app behind TLS termination such as Caddy, a load balancer, or a platform
+ingress. In `prod`, startup validation rejects unsafe settings such as weak
+Argon2 parameters and `APP_ALLOW_NOOP_MAILER=true`.
+
 ## Development
 
 ```sh
@@ -145,6 +178,7 @@ cargo run -- migrate
 
 For production deployment, see `docs/production.md`. For launch security review
 items that depend on the actual infrastructure, see `docs/security-review.md`.
+For a Caddy reverse-proxy example, see `deploy/Caddyfile.example`.
 
 ## Architecture
 
@@ -170,7 +204,9 @@ src/
 - **Refresh tokens** use family tracking with `SELECT ... FOR UPDATE`. Reuse detection revokes the entire family. Hashes are stored, raw tokens never persisted.
 - **Argon2id** with configurable cost; OWASP minimums enforced in `prod`. Unknown emails on login are still verified against a dummy hash to equalize timing.
 - **Rate limiting** is a Redis Lua token-bucket with four classes (`VeryStrict` 3/hr, `Strict` 10/min, `Medium` 60/min, `Low` 30/min). Trusted-proxy IP extraction validates against a CIDR allowlist.
-- **JWTs** are signed with Ed25519 (`jsonwebtoken` + `ed25519-dalek`).
+- **JWTs** are signed with Ed25519 (`jsonwebtoken` + `ed25519-dalek`) and support verify-only previous public keys for zero-downtime key rotation.
+- **Access-token revocation** stores a per-user revocation epoch in Redis for logout-all, password reset/change, account deletion, and admin session revocation.
+- **Admin passkeys** use WebAuthn as a second login step after a password for admins with registered credentials.
 - **Errors** are a single `AppError` enum mapped to HTTP status codes; validation errors include per-field detail.
 - **Health checks** are split: `/healthz` is liveness, `/readyz` actually pings DB and Redis with a 500 ms budget.
 - **Email delivery** is persisted to `email_outbox`, attempted immediately, and retried by a background worker.

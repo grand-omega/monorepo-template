@@ -1,7 +1,8 @@
 # Production Runbook
 
 This service is production-oriented but expects the deploy environment to provide
-PostgreSQL, Redis, SMTP, TLS termination, metrics scraping, and secret storage.
+PostgreSQL, Redis, SMTP, TLS termination, metrics scraping, alerting, backups,
+and secret storage.
 
 ## Release Gate
 
@@ -29,6 +30,8 @@ Required production decisions:
 - `APP_TRUSTED_PROXY_CIDRS` must match only the load balancer or ingress CIDRs.
 - `APP_METRICS_BIND_ADDR` should be reachable only from the metrics network.
 - `APP_ALLOW_NOOP_MAILER=false` is enforced in `prod`.
+- `APP_PUBLIC_BASE_URL` must be the public HTTPS API base URL used in
+  verification and password-reset emails.
 - `APP_WEBAUTHN_RP_ID` should be the bare host of the admin SPA, for example
   `admin.example.com`.
 - `APP_WEBAUTHN_RP_ORIGIN` must exactly match the admin SPA origin that calls
@@ -45,6 +48,24 @@ cargo run -- migrate
 For managed deploys, run the compiled binary with `migrate` as a one-shot job
 using the same image and production database secret. Back up the database before
 schema changes that touch auth/session/token tables.
+
+## TLS And Reverse Proxy
+
+Terminate public HTTPS at a trusted edge such as Caddy, a load balancer, or a
+platform ingress. It is normal for the public client to speak HTTPS to the edge
+while the edge speaks HTTP to the Rust app on a private network:
+
+```text
+client -> HTTPS -> Caddy/load balancer -> HTTP -> app:8080
+```
+
+Do not expose the app's `:8080` or metrics `:9090` ports directly to the
+internet. See `deploy/Caddyfile.example` for a minimal Caddy reverse-proxy
+example.
+
+If a proxy sets `X-Forwarded-For`, configure `APP_TRUSTED_PROXY_CIDRS` to only
+that proxy or ingress network. Do not trust arbitrary internet clients to set
+forwarded headers.
 
 ## Email Delivery
 
@@ -125,3 +146,14 @@ and Redis with a 500 ms budget, so remove instances from traffic when it fails.
 Use a rolling deployment only after migrations are complete. Keep at least one
 old instance available until the new version passes readiness and metrics show
 normal auth/login behavior.
+
+## Dev Versus Prod
+
+`docker-compose.yml` is a development stack: it uses MailHog, local credentials,
+HTTP, automatic migrations, and publicly published local ports. Do not use it as
+the production deployment file without hardening.
+
+Production should supply `APP_*` values from the platform configuration/secret
+system, set `APP_ENV=prod`, use JSON logs, run controlled migrations, terminate
+TLS at the edge, and restrict metrics/admin access by network or equivalent
+policy.

@@ -6,6 +6,7 @@ cannot verify these controls from the repository alone.
 ## Edge And Transport
 
 - TLS terminates at a trusted ingress; HTTP is redirected to HTTPS.
+- The app container or process port is not directly exposed to the internet.
 - Only ingress/load-balancer CIDRs are listed in `APP_TRUSTED_PROXY_CIDRS`.
 - `X-Forwarded-For` is stripped or overwritten by the trusted ingress.
 - `/metrics` is not internet-accessible.
@@ -14,6 +15,7 @@ cannot verify these controls from the repository alone.
 ## Browser And API Boundaries
 
 - `APP_CORS_ALLOWED_ORIGINS` contains exact production origins only.
+- `APP_PUBLIC_BASE_URL` is HTTPS and points at the public API origin.
 - Admin cookies are `Secure`, `HttpOnly` where appropriate, and `SameSite=Strict`.
 - State-changing admin API calls include `X-CSRF-Token`.
 - WebAuthn `APP_WEBAUTHN_RP_ORIGIN` exactly matches the admin SPA origin.
@@ -52,6 +54,8 @@ cannot verify these controls from the repository alone.
 ## Abuse And Availability
 
 - Redis outage behavior is accepted. Rate limiting currently fails open.
+- Edge/WAF/load-balancer rate limits are configured for auth-sensitive routes,
+  especially when Redis rate limiting is unavailable.
 - Alerts exist for login failure spikes, account lockouts, refresh token reuse,
   Redis rate-limit/revocation errors, passkey registration/removal, WebAuthn
   failures, and email outbox failures.

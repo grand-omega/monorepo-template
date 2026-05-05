@@ -1,4 +1,4 @@
-# Example production Caddy config for lab-rust-server.
+# Example production Caddy config for template-rust-server.
 #
 # Replace the domains before use. The Rust app should listen on a private
 # interface or Docker network address, not a public internet-facing port.
