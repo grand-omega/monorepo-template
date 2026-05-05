@@ -7,8 +7,8 @@ A production-leaning authentication & user-management API in Rust (Axum 0.8) —
 ## Quickstart
 
 ```sh
-make keys   # generate Ed25519 dev keys → .env.local
-make dev    # docker compose up: postgres, redis, mailhog, app
+just keys   # generate Ed25519 dev keys -> .env.local
+just dev    # docker compose up: postgres, redis, mailhog, app
 ```
 
 The API listens on `:8080`, metrics on `:9090`, MailHog UI on `:8025`, Swagger UI at `http://localhost:8080/docs` (dev only).
@@ -33,6 +33,8 @@ The API listens on `:8080`, metrics on `:9090`, MailHog UI on `:8025`, Swagger U
 | POST | `/admin/api/login` | admin login for users with `role = 'admin'`; sets admin cookies |
 | GET | `/admin/api/me` | current admin session |
 | GET | `/admin/api/users` | management user list |
+| GET | `/admin/api/users/{id}/sessions` | list a user's refresh-session families |
+| DELETE | `/admin/api/users/{id}/sessions` | revoke all refresh sessions for a user |
 | GET | `/admin/api/auth-events` | recent auth/security events |
 | GET | `/healthz` | liveness |
 | GET | `/readyz` | readiness — pings DB and Redis with a 500 ms budget |
@@ -83,12 +85,12 @@ Use `.env.production.example` as the production configuration inventory.
 ## Development
 
 ```sh
-make fmt              # rustfmt
-make clippy           # cargo clippy --all-targets -- -D warnings
-make test             # unit tests only (no Docker required)
-make test-integration # integration tests (spins up Postgres + Redis via testcontainers)
-make test-all         # both
-make check            # fmt + clippy + unit tests
+just fmt              # rustfmt
+just clippy           # cargo clippy --all-targets -- -D warnings
+just test             # unit tests only (no Docker required)
+just test-integration # integration tests (spins up Postgres + Redis via testcontainers)
+just test-all         # both
+just check            # fmt + clippy + unit tests
 ```
 
 GitHub Actions runs formatting, clippy, unit tests, and Docker-backed

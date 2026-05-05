@@ -44,6 +44,16 @@ pub struct AuthEventRow {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct UserSessionRow {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub ip: Option<ipnetwork::IpNetwork>,
+    pub user_agent: Option<String>,
+    pub revoked_at: Option<DateTime<Utc>>,
+}
+
 pub async fn find_admin_by_email(
     executor: impl PgExecutor<'_>,
     email: &str,
@@ -172,6 +182,43 @@ pub async fn find_managed_user(pool: &PgPool, id: Uuid) -> AppResult<Option<Mana
     .fetch_optional(pool)
     .await?;
     Ok(row)
+}
+
+pub async fn list_user_sessions(pool: &PgPool, user_id: Uuid) -> AppResult<Vec<UserSessionRow>> {
+    let rows = sqlx::query_as::<_, UserSessionRow>(
+        r#"WITH family_summary AS (
+               SELECT family_id,
+                      min(issued_at) AS created_at,
+                      max(used_at) AS last_used_at,
+                      CASE
+                          WHEN bool_or(revoked_at IS NULL AND expires_at > now()) THEN NULL
+                          ELSE max(revoked_at)
+                      END AS revoked_at
+               FROM refresh_tokens
+               WHERE user_id = $1
+               GROUP BY family_id
+           ),
+           latest_token AS (
+               SELECT DISTINCT ON (family_id)
+                      family_id, ip, user_agent
+               FROM refresh_tokens
+               WHERE user_id = $1
+               ORDER BY family_id, issued_at DESC, id DESC
+           )
+           SELECT s.family_id AS id,
+                  s.created_at,
+                  s.last_used_at,
+                  l.ip,
+                  l.user_agent,
+                  s.revoked_at
+           FROM family_summary s
+           JOIN latest_token l ON l.family_id = s.family_id
+           ORDER BY s.created_at DESC"#,
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
 }
 
 pub async fn list_auth_events(pool: &PgPool, limit: i64) -> AppResult<Vec<AuthEventRow>> {

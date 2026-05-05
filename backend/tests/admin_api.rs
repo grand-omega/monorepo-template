@@ -91,6 +91,14 @@ impl AdminClient {
             .await
             .expect("delete request")
     }
+
+    async fn get(&self, path: &str) -> reqwest::Response {
+        self.http
+            .get(format!("{}{}", self.base_url, path))
+            .send()
+            .await
+            .expect("get request")
+    }
 }
 
 async fn register(client: &reqwest::Client, base: &str, email: &str) {
@@ -404,6 +412,129 @@ async fn revoke_sessions_kills_refresh_tokens_and_logs_admin_actor() {
 }
 
 #[tokio::test]
+async fn user_sessions_requires_admin_session() {
+    let app = spawn_app().await;
+    let target_id = uuid::Uuid::now_v7();
+    let r = reqwest::Client::new()
+        .get(format!(
+            "{}/admin/api/users/{}/sessions",
+            app.base_url, target_id
+        ))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn user_sessions_returns_404_for_missing_user() {
+    let app = spawn_app().await;
+    let base = reqwest::Client::new();
+    let admin_email = "sessions-404-admin@example.test";
+    register(&base, &app.base_url, admin_email).await;
+    promote_to_admin(&app.db, admin_email).await;
+
+    let admin_client = AdminClient::new(&app.base_url);
+    admin_client.login(admin_email, PASSWORD).await;
+
+    let r = admin_client
+        .get(&format!(
+            "/admin/api/users/{}/sessions",
+            uuid::Uuid::now_v7()
+        ))
+        .await;
+    assert_eq!(r.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn user_sessions_lists_refresh_families_without_token_secrets() {
+    let app = spawn_app().await;
+    let base = reqwest::Client::new();
+    let admin_email = "sessions-admin@example.test";
+    let user_email = "sessions-user@example.test";
+    register(&base, &app.base_url, admin_email).await;
+    register(&base, &app.base_url, user_email).await;
+    promote_to_admin(&app.db, admin_email).await;
+
+    let first = base
+        .post(format!("{}/v1/auth/login", app.base_url))
+        .header("user-agent", "session-browser-a")
+        .json(&json!({ "email": user_email, "password": PASSWORD }))
+        .send()
+        .await
+        .unwrap()
+        .json::<Value>()
+        .await
+        .unwrap();
+    let second = base
+        .post(format!("{}/v1/auth/login", app.base_url))
+        .header("user-agent", "session-browser-b")
+        .json(&json!({ "email": user_email, "password": PASSWORD }))
+        .send()
+        .await
+        .unwrap()
+        .json::<Value>()
+        .await
+        .unwrap();
+    let first_refresh = first["refresh_token"].as_str().unwrap();
+
+    // Rotate one family so last_used_at is populated.
+    let r = base
+        .post(format!("{}/v1/auth/refresh", app.base_url))
+        .header("user-agent", "session-browser-a-rotated")
+        .json(&json!({ "refresh_token": first_refresh }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
+
+    let admin_client = AdminClient::new(&app.base_url);
+    admin_client.login(admin_email, PASSWORD).await;
+
+    let target_id: (uuid::Uuid,) = sqlx::query_as("SELECT id FROM users WHERE email = $1::citext")
+        .bind(user_email)
+        .fetch_one(&app.db)
+        .await
+        .unwrap();
+
+    let r = admin_client
+        .get(&format!("/admin/api/users/{}/sessions", target_id.0))
+        .await;
+    assert_eq!(r.status(), StatusCode::OK);
+    let body: Value = r.json().await.unwrap();
+    let items = body["items"].as_array().unwrap();
+    assert_eq!(items.len(), 2);
+
+    for item in items {
+        assert!(item["id"].as_str().is_some());
+        assert!(item["created_at"].as_str().is_some());
+        assert!(item.get("token_hash").is_none());
+        assert!(item.get("refresh_token").is_none());
+        assert!(item.get("family_id").is_none());
+        assert!(item["revoked_at"].is_null());
+    }
+    assert!(
+        items
+            .iter()
+            .any(|item| item["last_used_at"].as_str().is_some())
+    );
+    assert!(items.iter().any(|item| {
+        item["user_agent"]
+            .as_str()
+            .is_some_and(|ua| ua.contains("session-browser"))
+    }));
+
+    let second_refresh = second["refresh_token"].as_str().unwrap();
+    let r = base
+        .post(format!("{}/v1/auth/refresh", app.base_url))
+        .json(&json!({ "refresh_token": second_refresh }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
+}
+
+#[tokio::test]
 async fn unlock_and_verify_email_write_their_own_events() {
     let app = spawn_app().await;
     let base = reqwest::Client::new();
@@ -533,5 +664,6 @@ async fn openapi_json_is_publicly_served() {
     let body: Value = r.json().await.unwrap();
     let paths = body["paths"].as_object().unwrap();
     assert!(paths.contains_key("/admin/api/login"));
+    assert!(paths.contains_key("/admin/api/users/{id}/sessions"));
     assert!(paths.contains_key("/v1/auth/login"));
 }

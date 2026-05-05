@@ -8,8 +8,8 @@ PostgreSQL, Redis, SMTP, TLS termination, metrics scraping, and secret storage.
 Run these before promoting an image:
 
 ```sh
-make check
-make test-integration
+just check
+just test-integration
 ```
 
 CI runs the same checks in `.github/workflows/ci.yml`. Integration tests require

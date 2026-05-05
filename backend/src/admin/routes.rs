@@ -8,7 +8,7 @@
 //! The `AdminUser` extractor enforces both the session and the CSRF check; for
 //! safe methods (`GET`, `HEAD`, `OPTIONS`) the CSRF check is skipped.
 use crate::AppState;
-use crate::admin::repo::{self, AuthEventRow, ManagedUserRow};
+use crate::admin::repo::{self, AuthEventRow, ManagedUserRow, UserSessionRow};
 use crate::auth::events::{self, EventCtx, EventKind};
 use crate::auth::password::{dummy_hash, verify_password};
 use crate::auth::refresh;
@@ -23,7 +23,7 @@ use axum::extract::{ConnectInfo, FromRef, FromRequestParts, Path, Query, State};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, Method, StatusCode, header};
 use axum::response::{AppendHeaders, IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{get, post};
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,10 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/users/{id}/lock", post(user_lock))
         .route("/users/{id}/unlock", post(user_unlock))
         .route("/users/{id}/verify-email", post(user_verify_email))
-        .route("/users/{id}/sessions", delete(user_revoke_sessions))
+        .route(
+            "/users/{id}/sessions",
+            get(user_sessions).delete(user_revoke_sessions),
+        )
         .route("/auth-events", get(auth_events_list))
         .with_state(state)
 }
@@ -134,6 +137,30 @@ pub struct AuthEvent {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UserSession {
+    /// Refresh-token family id. Raw refresh tokens and token hashes are never exposed.
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
+    pub ip: Option<String>,
+    pub user_agent: Option<String>,
+    pub revoked_at: Option<DateTime<Utc>>,
+}
+
+impl From<UserSessionRow> for UserSession {
+    fn from(r: UserSessionRow) -> Self {
+        Self {
+            id: r.id,
+            created_at: r.created_at,
+            last_used_at: r.last_used_at,
+            ip: r.ip.map(|i| i.to_string()),
+            user_agent: r.user_agent,
+            revoked_at: r.revoked_at,
+        }
+    }
+}
+
 impl From<AuthEventRow> for AuthEvent {
     fn from(r: AuthEventRow) -> Self {
         Self {
@@ -159,6 +186,11 @@ pub struct PageManagedUser {
 pub struct PageAuthEvent {
     pub items: Vec<AuthEvent>,
     pub next_cursor: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UserSessionsResponse {
+    pub items: Vec<UserSession>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -589,6 +621,31 @@ pub async fn user_verify_email(
     )
     .await;
     Ok(Json(AdminAck::default()))
+}
+
+#[utoipa::path(
+    get,
+    path = "/admin/api/users/{id}/sessions",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "User id")),
+    responses(
+        (status = 200, description = "Refresh-token session families for user", body = UserSessionsResponse),
+        (status = 401, description = "No active admin session", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+)]
+pub async fn user_sessions(
+    State(state): State<AppState>,
+    _admin: AdminUser,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<UserSessionsResponse>> {
+    repo::find_managed_user(&state.db, id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let rows = repo::list_user_sessions(&state.db, id).await?;
+    Ok(Json(UserSessionsResponse {
+        items: rows.into_iter().map(UserSession::from).collect(),
+    }))
 }
 
 #[utoipa::path(
