@@ -30,14 +30,15 @@ down:
 
 # Unit tests only; no containers required.
 test:
-    SQLX_OFFLINE=true cargo test --lib
+    SQLX_OFFLINE=true cargo nextest run --lib
 
 # Integration tests; requires Docker for testcontainers.
 test-integration:
-    SQLX_OFFLINE=true cargo test --tests
+    SQLX_OFFLINE=true cargo nextest run --tests
 
 # Unit and integration tests.
-test-all: test test-integration
+test-all:
+    SQLX_OFFLINE=true cargo nextest run
 
 # Format Rust code.
 fmt:
@@ -51,7 +52,7 @@ clippy:
 check: fmt clippy test
 
 # Full local gate.
-check-all: fmt clippy test-integration
+check-all: fmt clippy test-all
 
 # Run database migrations once and exit.
 migrate:

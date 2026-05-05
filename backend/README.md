@@ -161,14 +161,14 @@ Argon2 parameters and `APP_ALLOW_NOOP_MAILER=true`.
 ```sh
 just fmt              # rustfmt
 just clippy           # cargo clippy --all-targets -- -D warnings
-just test             # unit tests only (no Docker required)
-just test-integration # integration tests (spins up Postgres + Redis via testcontainers)
-just test-all         # both
-just check            # fmt + clippy + unit tests
+just test             # cargo nextest run --lib
+just test-integration # cargo nextest run --tests (uses Docker/testcontainers)
+just test-all         # cargo nextest run
+just check            # fmt + clippy + unit tests via nextest
 ```
 
-GitHub Actions runs formatting, clippy, unit tests, and Docker-backed
-integration tests on pushes and pull requests.
+GitHub Actions runs formatting, clippy, and `cargo nextest run` on pushes and
+pull requests.
 
 Migrations live in `migrations/` and run on startup when `APP_MIGRATE_ON_START=true`. To run them out of band:
 

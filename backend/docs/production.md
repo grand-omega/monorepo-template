@@ -10,12 +10,12 @@ Run these before promoting an image:
 
 ```sh
 just check
-just test-integration
+cargo nextest run
 ```
 
 CI runs the backend checks in the root `.github/workflows/backend-ci.yml`.
-Integration tests require Docker because they use real Postgres and Redis
-through testcontainers.
+The full nextest run includes integration tests, which require Docker because
+they use real Postgres and Redis through testcontainers.
 
 ## Configuration
 
