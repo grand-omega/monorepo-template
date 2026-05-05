@@ -69,5 +69,13 @@ export default tseslint.config(
   {
     files: ["vite.config.ts", "playwright.config.ts", "eslint.config.js"],
     languageOptions: { globals: globals.node },
+  },
+  {
+    files: ["scripts/**/*.{mjs,js,ts}"],
+    languageOptions: { globals: { ...globals.node, fetch: "readonly" } },
+    rules: {
+      "no-console": "off",
+      "no-restricted-globals": "off",
+    },
   }
 );

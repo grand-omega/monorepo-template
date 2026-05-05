@@ -14,9 +14,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "openapi:fetch": "curl -fsSL ${API_URL:-http://localhost:8080}/openapi.json -o openapi.json",
+    "openapi:pull": "node scripts/openapi-pull.mjs",
     "openapi:gen": "openapi-typescript openapi.snapshot.json -o src/api/schema.ts",
-    "openapi": "npm run openapi:fetch && openapi-typescript openapi.json -o src/api/schema.ts"
+    "openapi:gen:live": "openapi-typescript openapi.json -o src/api/schema.ts",
+    "openapi:snapshot": "node scripts/openapi-snapshot.mjs",
+    "openapi:drift": "node scripts/openapi-pull.mjs && node scripts/openapi-drift.mjs",
+    "openapi": "npm run openapi:pull && npm run openapi:gen:live"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

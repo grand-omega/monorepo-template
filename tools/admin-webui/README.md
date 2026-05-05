@@ -14,26 +14,31 @@ Open http://localhost:5173/admin/. The dev server proxies `/admin/api/*` to `VIT
 
 ## Scripts
 
-| Command                           | Purpose                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------- |
-| `npm run dev`                     | Vite dev server with API proxy.                                               |
-| `npm run build`                   | Type-check, then production build to `dist/`.                                 |
-| `npm run preview`                 | Serve `dist/` locally.                                                        |
-| `npm run lint`                    | ESLint flat config.                                                           |
-| `npm run format` / `format:check` | Prettier.                                                                     |
-| `npm run typecheck`               | `tsc -b --noEmit` across project references.                                  |
-| `npm test`                        | Vitest (unit + component).                                                    |
-| `npm run test:e2e`                | Playwright. Spins up dev server unless `CI` is set.                           |
-| `npm run openapi`                 | Fetch live `/openapi.json` from `API_URL` and regenerate `src/api/schema.ts`. |
-| `npm run openapi:gen`             | Regenerate from the committed `openapi.snapshot.json` only.                   |
+| Command                           | Purpose                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `npm run dev`                     | Vite dev server with API proxy.                                                                  |
+| `npm run build`                   | Type-check, then production build to `dist/`.                                                    |
+| `npm run preview`                 | Serve `dist/` locally.                                                                           |
+| `npm run lint`                    | ESLint flat config.                                                                              |
+| `npm run format` / `format:check` | Prettier.                                                                                        |
+| `npm run typecheck`               | `tsc -b --noEmit` across project references.                                                     |
+| `npm test`                        | Vitest (unit + component).                                                                       |
+| `npm run test:e2e`                | Playwright. Spins up dev server unless `CI` is set.                                              |
+| `npm run openapi:pull`            | Fetch live `/openapi.json` from `API_URL`, strip `/admin/api`, write `openapi.json`.             |
+| `npm run openapi:gen`             | Generate `src/api/schema.ts` from the committed `openapi.snapshot.json` (CI default).            |
+| `npm run openapi:gen:live`        | Generate `src/api/schema.ts` from a freshly-pulled `openapi.json` instead.                       |
+| `npm run openapi`                 | Pull + generate from live, in one step (handy during local dev).                                 |
+| `npm run openapi:snapshot`        | Promote the pulled `openapi.json` to `openapi.snapshot.json`. Review the diff before committing. |
+| `npm run openapi:drift`           | Pull + diff against the snapshot. Exits 1 on drift. Used in CI.                                  |
 
 ## Codegen workflow
 
 The OpenAPI client is generated from the backend's `/openapi.json`. The flow:
 
 1. `openapi.snapshot.json` (committed) is the contract the SPA is built against. CI runs `openapi:gen` against the snapshot so the build is hermetic.
-2. To update the contract: `API_URL=http://localhost:8080 npm run openapi`. Review the diff in `src/api/schema.ts`; if the change is intentional, also update `openapi.snapshot.json` in the same PR.
-3. CI's `openapi-drift` job (enabled in step 2) fetches the live spec from a deployed backend and fails if it diverges from `openapi.snapshot.json` without a corresponding PR.
+2. To update the contract: `API_URL=http://localhost:8080 npm run openapi:pull`, then either work against `openapi.json` (`npm run openapi:gen:live`) or — if the new shape is the new contract — `npm run openapi:snapshot` to update the committed snapshot. Review and commit the snapshot diff alongside any client changes.
+3. The pull script strips the `/admin/api` prefix from path keys so the SPA's `openapi-fetch` client (with `baseUrl: "/admin/api"`) can call e.g. `api.GET("/me")`. Non-admin paths are dropped.
+4. CI's `openapi-drift` job runs on PRs when the `DEPLOYED_API_URL` repo variable is set: it fetches the live spec from that deployment and fails if it diverges from `openapi.snapshot.json` without a corresponding update. Set the variable under **Settings → Secrets and variables → Actions → Variables** once a staging backend is reachable; until then the job warns and passes.
 
 `openapi.json` and `src/api/schema.ts` are gitignored.
 

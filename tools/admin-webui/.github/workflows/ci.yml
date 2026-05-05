@@ -61,6 +61,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      # TODO(@yanwenxu, 2026-05-31): fetch live spec from a deployed backend
-      # and diff against openapi.snapshot.json. Stub for now.
-      - run: echo "drift check enabled in step 2 (codegen pipeline)."
+      - run: npm ci
+      - name: Drift check vs deployed backend
+        env:
+          API_URL: ${{ vars.DEPLOYED_API_URL }}
+        run: |
+          if [ -z "${API_URL:-}" ]; then
+            echo "::warning::DEPLOYED_API_URL repo variable not set — skipping drift check."
+            echo "Set it under Settings → Secrets and variables → Actions → Variables once a staging backend is reachable."
+            exit 0
+          fi
+          npm run openapi:drift
