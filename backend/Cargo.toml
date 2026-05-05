@@ -45,6 +45,7 @@ deadpool-redis = "0.23"
 redis = { version = "1", default-features = false, features = [
     "tokio-rustls-comp",
     "tls-rustls",
+    "script",
 ] }
 
 # auth / crypto
@@ -87,10 +88,6 @@ figment = { version = "0.10", features = ["env", "toml"] }
 # openapi
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
-
-# rate-limit
-tower_governor = "0.8"
-governor = "0.10"
 
 # misc
 chrono = { version = "0.4", features = ["serde"] }

@@ -5,6 +5,7 @@ use lab_rust_server::auth::JwtKeys;
 use lab_rust_server::config::Config;
 use lab_rust_server::email::mailer::{DynMailer, NoopMailer, SmtpMailer};
 use lab_rust_server::{db, redis_pool, router, telemetry};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -124,9 +125,12 @@ async fn run_serve() -> Result<()> {
     });
 
     let main_task = tokio::spawn(async move {
-        if let Err(e) = axum::serve(listener, app_router)
-            .with_graceful_shutdown(shutdown_signal())
-            .await
+        if let Err(e) = axum::serve(
+            listener,
+            app_router.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(shutdown_signal())
+        .await
         {
             error!(error = ?e, "main server error");
         }

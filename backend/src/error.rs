@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use tracing::error;
+use utoipa::ToSchema;
 
 pub type AppResult<T> = std::result::Result<T, AppError>;
 
@@ -63,18 +64,18 @@ pub enum AppError {
     Json(#[from] serde_json::Error),
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, ToSchema)]
 pub struct FieldError {
     pub field: String,
     pub code: String,
 }
 
-#[derive(Serialize)]
-struct ErrorBody {
-    code: &'static str,
-    message: String,
+#[derive(Serialize, ToSchema)]
+pub struct ErrorBody {
+    pub code: &'static str,
+    pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    fields: Option<Vec<FieldError>>,
+    pub fields: Option<Vec<FieldError>>,
 }
 
 impl AppError {

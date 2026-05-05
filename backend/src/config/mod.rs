@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use figment::Figment;
 use figment::providers::Env;
+use ipnetwork::IpNetwork;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -41,8 +42,8 @@ pub struct Config {
 
     #[serde(default, deserialize_with = "deserialize_csv")]
     pub cors_allowed_origins: Vec<String>,
-    #[serde(default, deserialize_with = "deserialize_csv")]
-    pub trusted_proxy_cidrs: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_cidr_csv")]
+    pub trusted_proxy_cidrs: Vec<IpNetwork>,
 
     pub migrate_on_start: bool,
     pub log_format: LogFormat,
@@ -75,6 +76,20 @@ fn deserialize_csv<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<String>
         .map(|p| p.trim().to_string())
         .filter(|p| !p.is_empty())
         .collect())
+}
+
+fn deserialize_cidr_csv<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Vec<IpNetwork>, D::Error> {
+    let s = String::deserialize(d)?;
+    s.split(',')
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(|p| {
+            p.parse::<IpNetwork>()
+                .map_err(|e| serde::de::Error::custom(format!("invalid CIDR {p:?}: {e}")))
+        })
+        .collect()
 }
 
 impl Config {

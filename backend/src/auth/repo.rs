@@ -58,6 +58,24 @@ pub async fn find_refresh_by_id(
     Ok(row)
 }
 
+/// Same as `find_refresh_by_id` but locks the row for the duration of the
+/// transaction. Used by the rotation path so two concurrent presentations of
+/// the same wire token serialize and the loser observes the rotated state.
+pub async fn find_refresh_by_id_for_update(
+    executor: impl PgExecutor<'_>,
+    id: Uuid,
+) -> AppResult<Option<RefreshTokenRow>> {
+    let row = sqlx::query_as::<_, RefreshTokenRow>(
+        r#"SELECT id, user_id, family_id, token_hash, expires_at, used_at, revoked_at, revoked_reason
+           FROM refresh_tokens WHERE id = $1
+           FOR UPDATE"#,
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await?;
+    Ok(row)
+}
+
 pub async fn mark_rotated(executor: impl PgExecutor<'_>, id: Uuid) -> AppResult<()> {
     sqlx::query(
         r#"UPDATE refresh_tokens

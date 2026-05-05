@@ -41,7 +41,7 @@ pub async fn register(
     let id = Uuid::now_v7();
 
     let mut tx = state.db.begin().await?;
-    let user = users_repo::insert(
+    let user = match users_repo::insert(
         &mut *tx,
         users_repo::NewUser {
             id,
@@ -50,7 +50,17 @@ pub async fn register(
             display_name,
         },
     )
-    .await?;
+    .await
+    {
+        Ok(u) => u,
+        // Lost the race against a concurrent registration of the same email.
+        // Stay silent (matches the pre-check branch) so we never leak existence.
+        Err(AppError::Sqlx(sqlx::Error::Database(db_err))) if db_err.is_unique_violation() => {
+            warn!(email = %email, "register race: duplicate email on insert");
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    };
 
     let (verify_url, token_id, hash) = build_verification_link(state, &user.id, &user.email);
     repo::insert_email_verification(
@@ -261,7 +271,7 @@ pub async fn refresh_token(
 
     let mut tx = state.db.begin().await?;
 
-    let row = repo::find_refresh_by_id(&mut *tx, parsed.id).await?;
+    let row = repo::find_refresh_by_id_for_update(&mut *tx, parsed.id).await?;
     let row = match row {
         None => return Err(AppError::InvalidToken),
         Some(r) => r,

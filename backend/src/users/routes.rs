@@ -1,6 +1,6 @@
 use crate::AppState;
 use crate::auth::dto::{AcceptedResponse, UserSummary};
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, ErrorBody};
 use crate::middleware::auth::AuthUser;
 use crate::middleware::rate_limit::{self, Class};
 use crate::users::{repo, service};
@@ -15,18 +15,18 @@ use validator::Validate;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/me", get(get_me).layer(rate_limit::layer(Class::Medium)))
+        .route("/me", get(get_me).layer(rate_limit::layer(&state, Class::Medium)))
         .route(
             "/me",
-            patch(patch_me).layer(rate_limit::layer(Class::Low)),
+            patch(patch_me).layer(rate_limit::layer(&state, Class::Low)),
         )
         .route(
             "/me",
-            delete(delete_me).layer(rate_limit::layer(Class::Low)),
+            delete(delete_me).layer(rate_limit::layer(&state, Class::Low)),
         )
         .route(
             "/me/password",
-            patch(change_password).layer(rate_limit::layer(Class::Low)),
+            patch(change_password).layer(rate_limit::layer(&state, Class::Low)),
         )
         .with_state(state)
 }
@@ -51,7 +51,18 @@ pub struct ChangePasswordRequest {
     pub new_password: String,
 }
 
-async fn get_me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<UserSummary>> {
+#[utoipa::path(
+    get,
+    path = "/v1/me",
+    tag = "users",
+    security(("bearer" = [])),
+    responses(
+        (status = 200, description = "Current user", body = UserSummary),
+        (status = 401, description = "Missing or invalid access token", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+)]
+pub async fn get_me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<UserSummary>> {
     let row = repo::find_by_id(&state.db, user.claims.sub)
         .await?
         .ok_or(AppError::NotFound)?;
@@ -63,7 +74,19 @@ async fn get_me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json
     }))
 }
 
-async fn patch_me(
+#[utoipa::path(
+    patch,
+    path = "/v1/me",
+    tag = "users",
+    security(("bearer" = [])),
+    request_body = PatchMeRequest,
+    responses(
+        (status = 200, description = "Updated", body = UserSummary),
+        (status = 401, description = "Missing or invalid access token", body = ErrorBody),
+        (status = 422, description = "Validation failed", body = ErrorBody),
+    ),
+)]
+pub async fn patch_me(
     State(state): State<AppState>,
     user: AuthUser,
     Json(body): Json<PatchMeRequest>,
@@ -83,7 +106,19 @@ async fn patch_me(
     }))
 }
 
-async fn delete_me(
+#[utoipa::path(
+    delete,
+    path = "/v1/me",
+    tag = "users",
+    security(("bearer" = [])),
+    request_body = DeleteMeRequest,
+    responses(
+        (status = 200, description = "Soft-deleted", body = AcceptedResponse),
+        (status = 401, description = "Wrong password or missing access token", body = ErrorBody),
+        (status = 422, description = "Validation failed", body = ErrorBody),
+    ),
+)]
+pub async fn delete_me(
     State(state): State<AppState>,
     user: AuthUser,
     Json(body): Json<DeleteMeRequest>,
@@ -93,7 +128,19 @@ async fn delete_me(
     Ok((StatusCode::OK, Json(AcceptedResponse::default())))
 }
 
-async fn change_password(
+#[utoipa::path(
+    patch,
+    path = "/v1/me/password",
+    tag = "users",
+    security(("bearer" = [])),
+    request_body = ChangePasswordRequest,
+    responses(
+        (status = 200, description = "Password changed; all other sessions revoked", body = AcceptedResponse),
+        (status = 401, description = "Wrong current password or missing access token", body = ErrorBody),
+        (status = 422, description = "Validation failed", body = ErrorBody),
+    ),
+)]
+pub async fn change_password(
     State(state): State<AppState>,
     user: AuthUser,
     Json(body): Json<ChangePasswordRequest>,
