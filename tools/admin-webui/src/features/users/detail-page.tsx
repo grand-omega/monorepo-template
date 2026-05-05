@@ -8,6 +8,7 @@ import { queryKeys } from "@/api/queries";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Time } from "@/components/time";
 import { useToast } from "@/components/toast";
+import { SessionsList } from "@/features/users/sessions-list";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 import { formatOptionalDateTime, formatRole } from "@/lib/format";
 import { Route } from "@/routes/_authenticated/users.$id";
@@ -65,32 +66,36 @@ function UserDetailContent({ user }: { user: ManagedUser }) {
         Back to users
       </Link>
       <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">{user.email}</h1>
-              {user.display_name ? (
-                <p className="mt-1 text-sm text-zinc-600">{user.display_name}</p>
-              ) : null}
+        <div>
+          <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold">{user.email}</h1>
+                {user.display_name ? (
+                  <p className="mt-1 text-sm text-zinc-600">{user.display_name}</p>
+                ) : null}
+              </div>
+              <span className="w-fit rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700 capitalize">
+                {formatRole(user.role)}
+              </span>
             </div>
-            <span className="w-fit rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-700 capitalize">
-              {formatRole(user.role)}
-            </span>
-          </div>
 
-          <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-            <Field label="User ID" value={user.id} />
-            <Field label="Email verified" value={user.email_verified ? "Yes" : "No"} />
-            <Field label="Failed logins" value={String(user.failed_login_count)} />
-            <Field label="Locked until" value={formatOptionalDateTime(user.locked_until)} />
-            <Field label="Created">
-              <Time value={user.created_at} />
-            </Field>
-            <Field label="Last login">
-              <Time value={user.last_login_at} />
-            </Field>
-          </dl>
-        </section>
+            <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+              <Field label="User ID" value={user.id} />
+              <Field label="Email verified" value={user.email_verified ? "Yes" : "No"} />
+              <Field label="Failed logins" value={String(user.failed_login_count)} />
+              <Field label="Locked until" value={formatOptionalDateTime(user.locked_until)} />
+              <Field label="Created">
+                <Time value={user.created_at} />
+              </Field>
+              <Field label="Last login">
+                <Time value={user.last_login_at} />
+              </Field>
+            </dl>
+          </section>
+
+          <SessionsList userId={user.id} />
+        </div>
 
         <UserActions user={user} />
       </div>
@@ -189,6 +194,9 @@ function UserActions({ user }: { user: ManagedUser }) {
       if (error) throw new ApiError(error, response);
     },
     onSettled: () => setDialog(null),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.userSessions(user.id) });
+    },
     onError: (error) => {
       toast.notify(apiErrorMessage(error));
     },

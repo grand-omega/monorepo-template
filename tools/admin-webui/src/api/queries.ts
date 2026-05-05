@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/errors";
 export const queryKeys = {
   me: ["me"] as const,
   user: (id: string) => ["users", id] as const,
+  userSessions: (id: string) => ["users", id, "sessions"] as const,
 };
 
 export const meQueryOptions = queryOptions({

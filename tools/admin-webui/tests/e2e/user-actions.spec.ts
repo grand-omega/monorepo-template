@@ -23,6 +23,7 @@ test.describe("user actions", () => {
 
     await expect(page).toHaveURL((url) => url.pathname.startsWith("/admin/users/"));
     await expect(page.getByRole("heading", { name: targetEmail ?? "" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sessions" })).toBeVisible();
 
     if (await page.getByRole("button", { exact: true, name: "Unlock user" }).isVisible()) {
       await page.getByRole("button", { exact: true, name: "Unlock user" }).click();
@@ -46,5 +47,6 @@ test.describe("user actions", () => {
     await expect(page.getByRole("dialog")).toContainText(targetEmail ?? "");
     await page.getByRole("button", { name: "Revoke sessions" }).last().click();
     await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page.getByText(/refresh sessions found|Active|Revoked/i).first()).toBeVisible();
   });
 });
