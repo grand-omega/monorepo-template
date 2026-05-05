@@ -1,0 +1,108 @@
+use anyhow::{Context, Result};
+use figment::Figment;
+use figment::providers::Env;
+use serde::Deserialize;
+use std::net::SocketAddr;
+use std::time::Duration;
+use url::Url;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Config {
+    pub env: AppEnv,
+    pub bind_addr: SocketAddr,
+    pub metrics_bind_addr: SocketAddr,
+    pub public_base_url: Url,
+
+    pub database_url: String,
+    pub database_max_connections: u32,
+    pub redis_url: String,
+
+    pub jwt_private_key: String,
+    pub jwt_public_key: String,
+    pub jwt_kid: String,
+    pub jwt_issuer: String,
+    pub jwt_audience: String,
+    #[serde(with = "humantime_serde")]
+    pub access_token_ttl: Duration,
+    #[serde(with = "humantime_serde")]
+    pub refresh_token_ttl: Duration,
+
+    pub smtp_url: String,
+    pub smtp_from: String,
+    pub smtp_from_name: String,
+
+    pub argon2_m_cost: u32,
+    pub argon2_t_cost: u32,
+    pub argon2_p_cost: u32,
+
+    pub login_max_failures: i32,
+    #[serde(with = "humantime_serde")]
+    pub login_lock_duration: Duration,
+
+    #[serde(default, deserialize_with = "deserialize_csv")]
+    pub cors_allowed_origins: Vec<String>,
+    #[serde(default, deserialize_with = "deserialize_csv")]
+    pub trusted_proxy_cidrs: Vec<String>,
+
+    pub migrate_on_start: bool,
+    pub log_format: LogFormat,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AppEnv {
+    Dev,
+    Prod,
+    Test,
+}
+
+impl AppEnv {
+    pub fn is_dev(self) -> bool {
+        matches!(self, AppEnv::Dev | AppEnv::Test)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogFormat {
+    Pretty,
+    Json,
+}
+
+fn deserialize_csv<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<String>, D::Error> {
+    let s = String::deserialize(d)?;
+    Ok(s.split(',')
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())
+        .collect())
+}
+
+impl Config {
+    pub fn from_env() -> Result<Self> {
+        let cfg: Config = Figment::new()
+            .merge(Env::prefixed("APP_").split("__"))
+            .extract()
+            .context("failed to load config from environment (APP_* vars)")?;
+        cfg.validate()?;
+        Ok(cfg)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.jwt_private_key.trim().is_empty() {
+            anyhow::bail!("APP_JWT_PRIVATE_KEY is required");
+        }
+        if self.jwt_public_key.trim().is_empty() {
+            anyhow::bail!("APP_JWT_PUBLIC_KEY is required");
+        }
+        if self.jwt_kid.trim().is_empty() {
+            anyhow::bail!("APP_JWT_KID is required");
+        }
+        if self.access_token_ttl > Duration::from_secs(60 * 60) {
+            anyhow::bail!("access_token_ttl must be <= 1 hour");
+        }
+        if self.refresh_token_ttl < Duration::from_secs(60 * 60) {
+            anyhow::bail!("refresh_token_ttl must be >= 1 hour");
+        }
+        Ok(())
+    }
+}
