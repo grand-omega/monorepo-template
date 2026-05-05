@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+playwright-report
+test-results
+openapi.json
+src/api/schema.ts
+src/routes/routeTree.gen.ts
+package-lock.json
+
+# User-authored docs — preserve exact formatting
+CLAUDE.md
+docs/plan.md

@@ -1,0 +1,12 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "lab-rust-server admin API (placeholder)",
+    "version": "0.0.0",
+    "description": "Snapshot stub. Replaced in step 2 once the backend exposes /openapi.json with the /admin/api/* surface from docs/plan.md §3."
+  },
+  "paths": {},
+  "components": {
+    "schemas": {}
+  }
+}
