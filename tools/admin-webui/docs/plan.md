@@ -4,7 +4,7 @@ Audience: an autonomous coding agent. Read this top to bottom before writing any
 
 ## 0. Context
 
-`lab-rust-server-admin` is the React SPA management interface for the Rust backend at `../lab-rust-server`. The backend already ships:
+`lab-rust-server-admin` is the React SPA management interface for the Rust backend at `../rust-server-template` in this workspace. The backend already ships:
 
 - A server-rendered HTML admin at `/admin/*` (to be replaced by this SPA — keep the URL space).
 - An `admin_sessions` table with opaque session tokens (`id.secret` format, SHA-256 hashed at rest), HttpOnly cookie auth, role checks at session validation.
@@ -15,9 +15,9 @@ This SPA lives in its own git repo, deployed as part of the backend's Docker ima
 
 ## 1. Coordination with the backend repo
 
-Before writing any frontend code, **post a checklist** to the backend repo (open an issue or PR description listing these prerequisites). Do not start frontend work until the backend confirms these:
+Historical backend prerequisites from the first planning pass. These are no longer a frontend-start blocker, but keep the checklist current when backend behavior changes:
 
-1. **CSRF middleware** on all `/admin/api/*` state-changing endpoints. Pattern: double-submit cookie. On admin login, backend sets a non-HttpOnly `csrf_token` cookie alongside the HttpOnly session cookie; frontend echoes it in `X-CSRF-Token` header on every POST/PATCH/DELETE; backend compares header against `admin_sessions.csrf_hash` (new column). Reject mismatches with HTTP 403, code `csrf_invalid`.
+1. **CSRF middleware** on all `/admin/api/*` state-changing endpoints. Pattern: double-submit cookie. On admin login, backend sets a non-HttpOnly `admin_csrf` cookie alongside the HttpOnly session cookie; frontend echoes it in `X-CSRF-Token` header on every POST/PATCH/DELETE; backend compares header against `admin_sessions.csrf_hash`. Reject mismatches with HTTP 403, code `csrf_invalid`.
 2. **Admin audit-log writes**. Every state-changing admin handler must call `events::record(...)` with `EventCtx { user_id: Some(target_user), detail: Some(json!({"by_admin": admin.user_id})), ip, user_agent }`. New `EventKind` variants: `AdminUserLocked`, `AdminUserUnlocked`, `AdminEmailVerified`, `AdminSessionsRevoked`, `AdminLogin`.
 3. **Per-admin login lockout**. Mirror `record_failed_login` for admin failures. Currently admin login bypasses the lockout flow entirely.
 4. **Timing leak fix on unknown admin email**. Run a dummy Argon2 verify when `find_admin_by_email` returns `None`, like `src/auth/service.rs:179` does for the regular login.
@@ -32,7 +32,7 @@ When the above land, the frontend can codegen against the spec and proceed.
 Locked. Do not substitute without justification.
 
 ```
-Vite 5+
+Vite 8
 React 19
 TypeScript (strict: true, noUncheckedIndexedAccess: true)
 TanStack Query v5     server-state cache
@@ -48,6 +48,7 @@ Vitest                unit tests
 Playwright            E2E tests
 ESLint flat config + typescript-eslint strict
 Prettier
+Bun 1.3.13            package manager and script runner
 ```
 
 Skip: Next.js (this is an SPA, not an SSR app), Redux/Zustand for server state (TanStack Query owns it), `react-admin` / Refine (you'll fight them within a month), `axios` (`openapi-fetch` is enough), CSS-in-JS (Tailwind only).
@@ -61,7 +62,7 @@ The backend agent will rewrite `src/admin/routes.rs` to expose the following. Us
 ```
 POST   /admin/api/login                 — body: { email, password }; sets session + csrf cookies
 POST   /admin/api/logout                — revokes current session, clears cookies
-GET    /admin/api/me                    — { user_id, email, role: "admin", csrf_token }
+GET    /admin/api/me                    — { user_id, email, role: "admin" }
 
 GET    /admin/api/users?q=&limit=&cursor=
                                         — { items: ManagedUser[], next_cursor: string | null }
@@ -69,12 +70,18 @@ GET    /admin/api/users/{id}            — ManagedUser
 POST   /admin/api/users/{id}/lock       — body: { until?: ISO8601, reason?: string }
 POST   /admin/api/users/{id}/unlock
 POST   /admin/api/users/{id}/verify-email
-POST   /admin/api/users/{id}/revoke-sessions
+DELETE /admin/api/users/{id}/sessions
 
 GET    /admin/api/auth-events?event_type=&user_id=&ip=&from=&to=&limit=&cursor=
                                         — { items: AuthEvent[], next_cursor }
 
 GET    /admin/api/users/{id}/sessions   — list of refresh-token families (last_used, ip, ua)
+
+POST   /admin/api/webauthn/register/begin
+POST   /admin/api/webauthn/register/finish
+GET    /admin/api/webauthn/credentials
+DELETE /admin/api/webauthn/credentials/{id}
+POST   /admin/api/webauthn/login/finish
 
 ManagedUser  = { id, email, role, email_verified, display_name, created_at,
                  last_login_at, failed_login_count, locked_until }
@@ -100,7 +107,7 @@ lab-rust-server-admin/
     auth/
       use-session.ts                 hook: reads /admin/api/me, throws to redirect on 401
       login-page.tsx
-      require-admin.tsx              route guard component
+      webauthn.ts                    WebAuthn register/login helpers
     components/
       ui/                            shadcn copy-paste
       data-table.tsx                 generic table w/ sorting + pagination
@@ -111,11 +118,6 @@ lab-rust-server-admin/
       users/
         list-page.tsx                table with search + pagination
         detail-page.tsx              user detail + actions sidebar
-        actions/
-          lock-action.tsx            confirm dialog; useMutation; invalidates ['users', id]
-          unlock-action.tsx
-          verify-email-action.tsx
-          revoke-sessions-action.tsx
         sessions-list.tsx            refresh-token families
       auth-events/
         list-page.tsx                virtualized table w/ filters
@@ -127,6 +129,7 @@ lab-rust-server-admin/
       _authenticated/users.tsx
       _authenticated/users.$id.tsx
       _authenticated/auth-events.tsx
+      _authenticated/passkeys.tsx
       login.tsx
       index.tsx                      redirects to /users
     lib/
@@ -138,11 +141,11 @@ lab-rust-server-admin/
   tests/
     e2e/
       login.spec.ts
-      lock-user.spec.ts
-      revoke-sessions.spec.ts
       auth-events.spec.ts
-    setup/
-      docker-compose.yml             postgres + redis + backend image for E2E
+      passkeys.spec.ts
+      polish.spec.ts
+      user-actions.spec.ts
+      users-list.spec.ts
   .env.example
   Dockerfile                         optional: standalone build, if backend pulls a tagged image
   vite.config.ts
@@ -164,7 +167,7 @@ const csrfMiddleware: Middleware = {
   async onRequest({ request }) {
     const method = request.method.toUpperCase();
     if (["POST", "PATCH", "PUT", "DELETE"].includes(method)) {
-      const token = readCookie("csrf_token");
+      const token = readCookie("admin_csrf");
       if (token) request.headers.set("X-CSRF-Token", token);
     }
     return request;
@@ -201,12 +204,15 @@ Use this everywhere. No raw `fetch` calls in the codebase except inside `client.
 
 ```bash
 # package.json scripts
-"openapi:fetch": "curl -fsSL ${API_URL:-http://localhost:8080}/openapi.json -o openapi.json"
-"openapi:gen":   "openapi-typescript openapi.json -o src/api/schema.ts"
-"openapi":       "bun run openapi:fetch && bun run openapi:gen"
+"openapi:pull":      "bun scripts/openapi-pull.mjs"
+"openapi:gen":       "openapi-typescript openapi.snapshot.json -o src/api/schema.ts"
+"openapi:gen:live":  "openapi-typescript openapi.json -o src/api/schema.ts"
+"openapi:snapshot":  "bun scripts/openapi-snapshot.mjs"
+"openapi:drift":     "bun scripts/openapi-pull.mjs && bun scripts/openapi-drift.mjs"
+"openapi":           "bun run openapi:pull && bun run openapi:gen:live"
 ```
 
-`openapi.json` and `src/api/schema.ts` are **gitignored**. CI runs `openapi:gen` against a checked-in `openapi.snapshot.json` (committed when the contract changes intentionally). A drift-check job in CI fetches the live spec from a deployed backend and diffs against the snapshot — fail if they diverge without a corresponding PR.
+`openapi.json` and `src/api/schema.ts` are **gitignored**. CI runs `openapi:gen` against checked-in `openapi.snapshot.json`, so builds are hermetic. A drift-check job in CI fetches the live spec from a deployed backend and diffs against the snapshot when `DEPLOYED_API_URL` is configured.
 
 This is how the polyrepo stays sane. Don't skip the snapshot.
 
@@ -216,7 +222,7 @@ This is how the polyrepo stays sane. Don't skip the snapshot.
 2. `__root.tsx` route guard calls `useQuery({ queryKey: ['me'], queryFn: () => api.GET('/me') })`.
 3. On 401, `authMiddleware` redirects to `/admin/login`.
 4. Login page submits `{ email, password }` to `/admin/api/login`.
-5. Backend sets `admin_session` (HttpOnly) and `csrf_token` (readable) cookies, returns `{ user_id, email, csrf_token }`.
+5. Backend sets `admin_session` (HttpOnly) and `admin_csrf` (readable) cookies. If the admin has registered passkeys, login returns `kind: "webauthn_required"` and the SPA completes `/admin/api/webauthn/login/finish` before cookies are issued.
 6. Frontend invalidates `['me']`, navigates to `/admin/users`.
 7. Logout: `POST /admin/api/logout`, then `queryClient.clear()`, then navigate to login.
 
@@ -252,9 +258,9 @@ These are not optional:
 |---|---|---|
 | Unit | Vitest | Pure functions: formatters, CSRF cookie read, error parsers. ~100% on `lib/`. |
 | Component | Vitest + Testing Library | One test per feature page: renders, handles loading, error, empty. |
-| E2E | Playwright | Login → list → detail → action → assert audit event. Run against real backend in docker-compose. |
+| E2E | Playwright | Login → list → detail → action → assert audit event when backend credentials are configured. Route/form/passkey smoke tests run without credentials. |
 
-E2E is **mandatory** and runs in CI against a docker-compose stack (postgres + redis + backend image + frontend dev server). The `tests/setup/docker-compose.yml` reuses the backend's compose file with `extends`. Don't fake the backend with MSW for E2E — the whole point is to catch contract drift.
+E2E should run against the real backend. Local Playwright starts the Vite dev server with `bun run dev` and uses the installed Chrome channel. Credential-backed tests are skipped unless the relevant `E2E_*` variables are present. CI currently installs, codegens, and leaves backend-backed e2e wiring as a follow-up until a backend stack is available in the workflow.
 
 Component-level tests *can* mock the API with MSW for speed, but use the same generated `schema.ts` types so mocks stay in sync.
 
@@ -265,6 +271,7 @@ Playwright must cover, at minimum:
 - Demoted admin (revoked role mid-session) — gets 401 on next request, redirected.
 - Lock user → confirm dialog shows target email → submit → audit event appears in `/auth-events`.
 - Revoke sessions → confirm → user's refresh tokens dead in DB.
+- Passkey page renders empty state and password-only bootstrap login works when an admin has no passkeys.
 - Search users with special chars (no XSS).
 
 ## 11. Deployment
@@ -324,20 +331,21 @@ The Rust backend serves `/admin/*` static assets via `tower_http::services::Serv
 Each numbered step is a shippable PR. Do not combine.
 
 1. **Repo scaffolding**: Vite + TS + Tailwind + shadcn-init + ESLint + Prettier + Vitest + Playwright + CI workflow + README + this plan committed. No app code yet.
-2. **Codegen pipeline**: `openapi:fetch`/`openapi:gen` scripts + snapshot + drift-check CI job. Snapshot a stub `openapi.json` if backend isn't ready yet.
+2. **Codegen pipeline**: `openapi:pull`/`openapi:gen` scripts + snapshot + drift-check CI job. Snapshot a stub `openapi.json` if backend isn't ready yet.
 3. **API client**: `src/api/client.ts` with both middlewares + tests. Mock backend with MSW for the unit tests.
 4. **Routing skeleton**: `__root.tsx`, `_authenticated.tsx` guard, `login.tsx`, `index.tsx`. Login is non-functional but route guard works.
 5. **Auth wired**: `useSession`, login form, logout. E2E: login.spec.ts.
 6. **Users list**: search, pagination, table, time formatting. E2E: ensure list renders post-login.
-7. **User detail + actions**: lock/unlock/verify-email/revoke-sessions, all with confirm dialogs and optimistic updates. E2E: lock-user.spec.ts, revoke-sessions.spec.ts.
-8. **Auth events**: virtualized table, filters by event_type/user/ip/time, detail drawer. E2E: auth-events.spec.ts.
-9. **User sessions sub-view**: list refresh-token families on user detail. Per-session revoke. (Backend may need an endpoint addition — coordinate.)
-10. **Polish pass**: keyboard shortcuts, empty states, error toasts with request IDs, accessibility audit (axe-core in CI).
-11. **Deploy**: multi-stage Dockerfile in backend repo, integration test that the served SPA + API both work behind a single port.
+7. **User detail + actions**: lock/unlock/verify-email/revoke-sessions, all with confirm dialogs and optimistic updates. E2E: user-actions.spec.ts.
+8. **Auth events**: table, filters by event_type/user, detail drawer. E2E: auth-events.spec.ts.
+9. **User sessions sub-view**: list refresh-token families on user detail and revoke all sessions.
+10. **Admin passkeys**: register/list/delete passkeys; complete `webauthn_required` login flow.
+11. **Polish pass**: keyboard shortcuts, empty states, error toasts with request IDs, accessibility audit (axe-core in CI).
+12. **Deploy**: multi-stage Dockerfile in backend repo, integration test that the served SPA + API both work behind a single port.
 
 ## 15. What NOT to build (explicitly out of scope for v1)
 
-- TOTP / WebAuthn for admin login. Backend doesn't support it yet; SPA waits.
+- TOTP recovery. WebAuthn passkeys are now supported for admin login; lost-passkey recovery remains an operator procedure.
 - Email-change confirmation flow. Same.
 - Internationalization (i18n). One-language only — English. Don't reach for `react-intl`.
 - Dark mode. Not now. Single light theme. (You can add it later with `next-themes` + Tailwind v4's `@variant dark`.)
@@ -371,6 +379,7 @@ A new admin can:
 - [ ] Revoke a user's sessions.
 - [ ] See the auth-events log filtered by event type, user, IP, and time range.
 - [ ] Log out.
+- [ ] Register, list, and remove admin passkeys.
 - [ ] Have every action they took show up in `/auth-events` with their admin identity stamped on it.
 - [ ] Get a clear error message with a request ID if anything fails.
 - [ ] Use the panel from a keyboard, with screen-reader-friendly labels.

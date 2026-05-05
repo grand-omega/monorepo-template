@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { Button, Panel } from "@/components/ui";
+import { Button, Panel, type ButtonVariant } from "@/components/ui";
 
 interface ConfirmDialogProps {
   children?: ReactNode;
   confirmLabel: string;
+  confirmVariant?: ButtonVariant;
   description: string;
   disabled?: boolean;
   onCancel: () => void;
@@ -15,6 +16,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({
   children,
   confirmLabel,
+  confirmVariant = "primary",
   description,
   disabled = false,
   onCancel,
@@ -41,11 +43,7 @@ export function ConfirmDialog({
           <Button onClick={onCancel} variant="secondary">
             Cancel
           </Button>
-          <Button
-            disabled={disabled}
-            onClick={onConfirm}
-            variant={title === "Lock user" ? "danger" : "primary"}
-          >
+          <Button disabled={disabled} onClick={onConfirm} variant={confirmVariant}>
             {confirmLabel}
           </Button>
         </div>

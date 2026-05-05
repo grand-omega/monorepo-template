@@ -252,6 +252,7 @@ function UserActions({ user }: { user: ManagedUser }) {
 
       <ConfirmDialog
         confirmLabel={pending ? "Locking..." : "Lock user"}
+        confirmVariant="danger"
         description={`Lock ${user.email}. The backend default expiration will be used.`}
         disabled={pending}
         onCancel={() => setDialog(null)}
@@ -289,6 +290,7 @@ function UserActions({ user }: { user: ManagedUser }) {
       />
       <ConfirmDialog
         confirmLabel={pending ? "Revoking..." : "Revoke sessions"}
+        confirmVariant="danger"
         description={`Revoke all refresh-token sessions for ${user.email}.`}
         disabled={pending}
         onCancel={() => setDialog(null)}

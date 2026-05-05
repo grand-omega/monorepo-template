@@ -1,6 +1,6 @@
 # lab-rust-server-admin
 
-React SPA management interface for the Rust backend at [`../lab-rust-server`](../lab-rust-server). Served from `/admin/*` by the backend in production. See [`docs/plan.md`](docs/plan.md) for the full plan; this README is the quickstart.
+React SPA management interface for the Rust backend at [`../rust-server-template`](../rust-server-template). Served from `/admin/*` by the backend in production. See [`docs/plan.md`](docs/plan.md) for the full plan; this README is the quickstart.
 
 ## Quickstart
 
@@ -11,6 +11,14 @@ bun run dev
 ```
 
 Open http://localhost:5173/admin/. The dev server proxies `/admin/api/*` to `VITE_API_URL` (default `http://localhost:8080`).
+
+If the admin UI shows a `/me` or proxy error, start the backend first:
+
+```bash
+cd ../rust-server-template
+just keys
+just dev
+```
 
 ## Scripts
 
@@ -44,11 +52,11 @@ The OpenAPI client is generated from the backend's `/openapi.json`. The flow:
 
 ## E2E credentials
 
-Login/logout E2E tests run against the real backend when `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are set. Without those variables, credential-backed tests are skipped while route/form tests still run. E2E runs against the installed Chrome channel.
+Login/logout and admin-management E2E tests run against the real backend when `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`, and optional target-user variables are set. Without those variables, credential-backed tests are skipped while route/form/passkey UI smoke tests still run. E2E runs against the installed Chrome channel.
 
 ## Stack
 
-Vite 5 · React 19 · TypeScript (strict + `noUncheckedIndexedAccess`) · TanStack Query v5 · TanStack Router · shadcn/ui · Tailwind CSS v4 · Zod · React Hook Form · openapi-fetch · date-fns · Vitest · Playwright · ESLint flat + typescript-eslint strict · Prettier.
+Vite 8 · React 19 · TypeScript (strict + `noUncheckedIndexedAccess`) · TanStack Query v5 · TanStack Router · shadcn/ui · Tailwind CSS v4 · Zod · React Hook Form · openapi-fetch · WebAuthn helpers · date-fns · Vitest · Playwright · ESLint flat + typescript-eslint strict · Prettier.
 
 See `docs/plan.md` §2 for the locked stack and §16 for coding conventions.
 
