@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use lab_rust_server::AppState;
 use lab_rust_server::auth::JwtKeys;
+use lab_rust_server::auth::tokens::PreviousPublicKey;
 use lab_rust_server::config::Config;
 use lab_rust_server::email::mailer::{DynMailer, NoopMailer, SmtpMailer};
 use lab_rust_server::{db, redis_pool, router, telemetry};
@@ -65,12 +66,19 @@ async fn run_serve() -> Result<()> {
     }
     let redis = redis_pool::connect(&cfg.redis_url)?;
 
-    let jwt_keys = JwtKeys::from_pem(
+    let previous_keys: Vec<PreviousPublicKey> = match cfg.jwt_previous_public_keys.as_deref() {
+        Some(s) if !s.trim().is_empty() => serde_json::from_str(s).context(
+            "APP_JWT_PREVIOUS_PUBLIC_KEYS must be a JSON array of {kid, public_key_pem}",
+        )?,
+        _ => Vec::new(),
+    };
+    let jwt_keys = JwtKeys::from_pem_set(
         cfg.jwt_kid.clone(),
         cfg.jwt_issuer.clone(),
         cfg.jwt_audience.clone(),
         &cfg.jwt_private_key,
         &cfg.jwt_public_key,
+        &previous_keys,
     )?;
 
     let mailer: DynMailer = match SmtpMailer::new(
@@ -97,12 +105,19 @@ async fn run_serve() -> Result<()> {
     let bind_addr = cfg.bind_addr;
     let metrics_addr = cfg.metrics_bind_addr;
 
+    let webauthn = webauthn_rs::WebauthnBuilder::new(&cfg.webauthn_rp_id, &cfg.webauthn_rp_origin)
+        .context("invalid APP_WEBAUTHN_RP_ID / APP_WEBAUTHN_RP_ORIGIN")?
+        .rp_name(&cfg.webauthn_rp_name)
+        .build()
+        .context("failed to build Webauthn")?;
+
     let state = AppState {
         config: Arc::new(cfg),
         db: pool.clone(),
         redis,
         jwt_keys: Arc::new(jwt_keys),
         mailer,
+        webauthn: Arc::new(webauthn),
     };
 
     spawn_cleanup_task(state.clone());

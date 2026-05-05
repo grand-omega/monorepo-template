@@ -59,6 +59,7 @@ pub fn router(state: AppState) -> Router<AppState> {
             get(user_sessions).delete(user_revoke_sessions),
         )
         .route("/auth-events", get(auth_events_list))
+        .nest("/webauthn", crate::admin::webauthn::router(state.clone()))
         .with_state(state)
 }
 
@@ -83,6 +84,30 @@ pub struct AdminMe {
 pub struct AdminLoginResponse {
     pub user_id: Uuid,
     pub email: String,
+}
+
+/// Response shape for `/admin/api/login`. The caller must branch on `kind`:
+///
+/// - `authenticated` — session cookies are set on this response and the admin
+///   may now call protected endpoints.
+/// - `webauthn_required` — password was correct but the admin has registered
+///   passkeys, so no cookies were set. The client must complete the WebAuthn
+///   ceremony at `/admin/api/webauthn/login/finish` using `pending_token` and
+///   the assertion produced by `navigator.credentials.get(challenge)`.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum AdminLoginOutcome {
+    Authenticated(AdminLoginResponse),
+    WebauthnRequired(WebauthnRequiredPayload),
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WebauthnRequiredPayload {
+    /// Opaque token tying this login attempt to its WebAuthn challenge.
+    /// Single-use and expires in 5 minutes.
+    pub pending_token: String,
+    /// PublicKeyCredentialRequestOptions, ready for `navigator.credentials.get`.
+    pub challenge: serde_json::Value,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -282,7 +307,7 @@ fn is_safe_method(method: &Method) -> bool {
     tag = "admin",
     request_body = AdminLoginRequest,
     responses(
-        (status = 200, description = "Logged in; sets admin_session and admin_csrf cookies", body = AdminLoginResponse),
+        (status = 200, description = "Either logged in with cookies set, or password verified and a WebAuthn step is required", body = AdminLoginOutcome),
         (status = 401, description = "Invalid credentials", body = ErrorBody),
         (status = 422, description = "Validation failed", body = ErrorBody),
         (status = 429, description = "Rate limited", body = ErrorBody),
@@ -380,6 +405,30 @@ pub async fn login(
 
     users::repo::record_successful_login(&state.db, admin.id).await?;
 
+    // If this admin has registered any passkeys, the password was step 1 — defer
+    // session-cookie issuance to the WebAuthn ceremony at
+    // /admin/api/webauthn/login/finish. The bootstrap path (admin with zero
+    // registered passkeys) keeps the password-only behavior so the very first
+    // admin in a fresh deploy can log in to register a key.
+    if crate::admin::webauthn::admin_has_credentials(&state.db, admin.id).await? {
+        let (challenge, auth_state) =
+            crate::admin::webauthn::start_admin_authentication(&state, &admin).await?;
+        let pending_token =
+            crate::admin::webauthn::park_pending_login(&state, admin.id, auth_state).await?;
+        // Note: no session cookies are set here; cookies are issued only after
+        // /admin/api/webauthn/login/finish verifies the assertion.
+        return Ok((
+            StatusCode::OK,
+            Json(AdminLoginOutcome::WebauthnRequired(
+                WebauthnRequiredPayload {
+                    pending_token,
+                    challenge,
+                },
+            )),
+        )
+            .into_response());
+    }
+
     let (session_token, session_id, session_secret) = new_token();
     let (csrf_token, _, _) = new_token();
     repo::insert_session(
@@ -407,10 +456,10 @@ pub async fn login(
     .await;
 
     let max_age = ADMIN_SESSION_TTL_HOURS * 3600;
-    let response = Json(AdminLoginResponse {
+    let response = Json(AdminLoginOutcome::Authenticated(AdminLoginResponse {
         user_id: admin.id,
         email: admin.email,
-    });
+    }));
     Ok((
         StatusCode::OK,
         AppendHeaders([
@@ -665,6 +714,7 @@ pub async fn user_revoke_sessions(
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<AdminAck>> {
     let n = crate::auth::repo::revoke_all_for_user(&state.db, id, "admin_revoked").await?;
+    crate::auth::revocation::revoke_user(&state.redis, id, state.config.access_token_ttl).await;
     events::record(
         &state.db,
         EventKind::AdminSessionsRevoked,

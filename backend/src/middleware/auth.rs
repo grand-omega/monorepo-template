@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::auth::revocation;
 use crate::auth::tokens::{AccessClaims, decode_access_token};
 use crate::error::AppError;
 use axum::extract::{FromRef, FromRequestParts};
@@ -29,6 +30,9 @@ where
             .strip_prefix("Bearer ")
             .ok_or(AppError::Unauthorized)?;
         let claims = decode_access_token(&app_state.jwt_keys, token)?;
+        if revocation::is_revoked(&app_state.redis, claims.sub, claims.iat).await {
+            return Err(AppError::InvalidToken);
+        }
         Ok(AuthUser { claims })
     }
 }

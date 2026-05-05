@@ -4,6 +4,7 @@ use crate::auth::events::{self, EventCtx, EventKind};
 use crate::auth::password::{hash_password, verify_password};
 use crate::auth::refresh;
 use crate::auth::repo as auth_repo;
+use crate::auth::revocation;
 use crate::auth::tokens::issue_access_token;
 use crate::error::{AppError, AppResult};
 use crate::users::repo;
@@ -22,6 +23,7 @@ pub async fn delete_self(state: &AppState, user_id: Uuid, password_confirm: &str
     repo::soft_delete(&mut *tx, user_id).await?;
     auth_repo::revoke_all_for_user(&mut *tx, user_id, "account_deleted").await?;
     tx.commit().await?;
+    revocation::revoke_user(&state.redis, user_id, state.config.access_token_ttl).await;
     Ok(())
 }
 
@@ -50,6 +52,9 @@ pub async fn change_password(
     repo::update_password(&mut *tx, user_id, &new_hash).await?;
     auth_repo::revoke_all_for_user(&mut *tx, user_id, "password_change").await?;
     tx.commit().await?;
+    // Mark old access tokens as revoked BEFORE issuing the new one so the new
+    // token's iat (== now) is not less than the recorded revocation epoch.
+    revocation::revoke_user(&state.redis, user_id, state.config.access_token_ttl).await;
 
     let (access_token, _claims) = issue_access_token(
         &state.jwt_keys,

@@ -247,6 +247,52 @@ async fn logout_revokes_only_presented_token_logout_all_revokes_family() {
 }
 
 #[tokio::test]
+async fn logout_all_invalidates_outstanding_access_tokens() {
+    // Refresh-token revocation is already covered above. This test asserts the
+    // newly-added per-user revocation epoch: after /logout-all, the *access*
+    // token presented to a bearer-protected endpoint must also fail.
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+
+    register(&client, &app.base_url, "rev@example.test").await;
+    let pair = login(&client, &app.base_url, "rev@example.test").await;
+    let access = pair["access_token"].as_str().unwrap().to_string();
+
+    // Sanity: the access token works before revocation.
+    let me = client
+        .get(format!("{}/v1/me", app.base_url))
+        .bearer_auth(&access)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(me.status(), StatusCode::OK);
+
+    // JWT iat has 1-second resolution; sleep so the access token's iat is
+    // strictly earlier than the revocation epoch we're about to write.
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+
+    // Revoke everything for this user.
+    let resp = client
+        .post(format!("{}/v1/auth/logout-all", app.base_url))
+        .bearer_auth(&access)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // The same access token must now be rejected.
+    let me = client
+        .get(format!("{}/v1/me", app.base_url))
+        .bearer_auth(&access)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(me.status(), StatusCode::UNAUTHORIZED);
+    let body: Value = me.json().await.unwrap();
+    assert_eq!(body["code"], "invalid_token");
+}
+
+#[tokio::test]
 async fn logout_requires_refresh_secret_not_only_token_id() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();

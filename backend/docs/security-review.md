@@ -16,6 +16,8 @@ cannot verify these controls from the repository alone.
 - `APP_CORS_ALLOWED_ORIGINS` contains exact production origins only.
 - Admin cookies are `Secure`, `HttpOnly` where appropriate, and `SameSite=Strict`.
 - State-changing admin API calls include `X-CSRF-Token`.
+- WebAuthn `APP_WEBAUTHN_RP_ORIGIN` exactly matches the admin SPA origin.
+- WebAuthn `APP_WEBAUTHN_RP_ID` is the intended admin host or parent domain.
 - OpenAPI exposure is approved for the deployment environment.
 
 ## Secrets
@@ -24,14 +26,20 @@ cannot verify these controls from the repository alone.
   stored in the platform secret manager.
 - Secret values are not present in images, logs, shell history, or repo files.
 - There is an owner and documented process for JWT key rotation.
+- Previous JWT public keys are removed from `APP_JWT_PREVIOUS_PUBLIC_KEYS` after
+  the access-token rotation window expires.
 
 ## Auth Policy
 
 - Access-token TTL is accepted by the risk owner.
-- The residual risk that old access tokens remain valid until expiry after
-  logout/password reset is documented.
-- Admin users have a separate account review process. Add MFA before exposing
-  admin API to broad networks.
+- Redis-backed per-user revocation is accepted as the logout/password-reset
+  access-token invalidation mechanism, including its fail-open behavior during
+  Redis outages.
+- Admin users have a separate account review process before access is granted.
+- Each admin has at least two registered passkeys, or there is a documented
+  exception and recovery path.
+- Lost-passkey recovery requires operator identity verification and a documented
+  database/admin procedure; it is not self-service.
 - Password reset and verification email sender domains have SPF, DKIM, and DMARC.
 
 ## Data And Audit
@@ -45,5 +53,7 @@ cannot verify these controls from the repository alone.
 
 - Redis outage behavior is accepted. Rate limiting currently fails open.
 - Alerts exist for login failure spikes, account lockouts, refresh token reuse,
-  Redis rate-limit errors, and email outbox failures.
-- Load tests cover login, refresh, password reset request, and admin listing.
+  Redis rate-limit/revocation errors, passkey registration/removal, WebAuthn
+  failures, and email outbox failures.
+- Load tests cover login, refresh, password reset request, admin listing, and
+  the admin WebAuthn challenge/finish flow.

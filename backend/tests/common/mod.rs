@@ -136,6 +136,7 @@ pub async fn spawn_app() -> TestApp {
         jwt_kid: "test-kid".into(),
         jwt_issuer: "test-iss".into(),
         jwt_audience: "test-aud".into(),
+        jwt_previous_public_keys: None,
         access_token_ttl: Duration::from_secs(900),
         refresh_token_ttl: Duration::from_secs(60 * 60 * 24 * 7),
         smtp_url: "smtp://localhost:1".into(),
@@ -155,16 +156,26 @@ pub async fn spawn_app() -> TestApp {
         trusted_proxy_cidrs: vec![],
         migrate_on_start: false,
         log_format: LogFormat::Pretty,
+        webauthn_rp_id: "localhost".to_string(),
+        webauthn_rp_origin: Url::parse("http://localhost:5173").unwrap(),
+        webauthn_rp_name: "Admin Console (test)".to_string(),
     };
 
     let capturing = Arc::new(CapturingMailer::default());
     let mailer: DynMailer = capturing.clone();
+    let webauthn =
+        webauthn_rs::WebauthnBuilder::new(&config.webauthn_rp_id, &config.webauthn_rp_origin)
+            .expect("webauthn builder")
+            .rp_name(&config.webauthn_rp_name)
+            .build()
+            .expect("webauthn build");
     let state = AppState {
         config: Arc::new(config),
         db: pool.clone(),
         redis: redis_pool,
         jwt_keys: jwt_keys.clone(),
         mailer,
+        webauthn: Arc::new(webauthn),
     };
 
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");

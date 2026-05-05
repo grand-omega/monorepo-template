@@ -5,6 +5,7 @@ use crate::email::mailer::DynMailer;
 use crate::redis_pool::RedisPool;
 use sqlx::PgPool;
 use std::sync::Arc;
+use webauthn_rs::Webauthn;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -13,6 +14,7 @@ pub struct AppState {
     pub redis: RedisPool,
     pub jwt_keys: Arc<JwtKeys>,
     pub mailer: DynMailer,
+    pub webauthn: Arc<Webauthn>,
 }
 
 impl AppState {

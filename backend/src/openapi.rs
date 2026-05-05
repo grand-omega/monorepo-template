@@ -1,4 +1,5 @@
 use crate::admin::routes as admin_routes;
+use crate::admin::webauthn as admin_webauthn;
 use crate::auth::dto;
 use crate::auth::routes as auth_routes;
 use crate::error::{ErrorBody, FieldError};
@@ -34,6 +35,11 @@ use utoipa::{Modify, OpenApi};
         admin_routes::user_sessions,
         admin_routes::user_revoke_sessions,
         admin_routes::auth_events_list,
+        admin_webauthn::register_begin,
+        admin_webauthn::register_finish,
+        admin_webauthn::list_credentials,
+        admin_webauthn::delete_credential,
+        admin_webauthn::login_finish,
     ),
     components(schemas(
         dto::RegisterRequest,
@@ -52,6 +58,8 @@ use utoipa::{Modify, OpenApi};
         users_routes::ChangePasswordRequest,
         admin_routes::AdminLoginRequest,
         admin_routes::AdminLoginResponse,
+        admin_routes::AdminLoginOutcome,
+        admin_routes::WebauthnRequiredPayload,
         admin_routes::AdminMe,
         admin_routes::AdminAck,
         admin_routes::ManagedUser,
@@ -61,6 +69,12 @@ use utoipa::{Modify, OpenApi};
         admin_routes::LockRequest,
         admin_routes::PageManagedUser,
         admin_routes::PageAuthEvent,
+        admin_webauthn::RegisterBeginResponse,
+        admin_webauthn::RegisterFinishRequest,
+        admin_webauthn::CredentialSummary,
+        admin_webauthn::CredentialListResponse,
+        admin_webauthn::LoginFinishOk,
+        admin_webauthn::LoginFinishRequest,
         ErrorBody,
         FieldError,
     )),
@@ -69,6 +83,7 @@ use utoipa::{Modify, OpenApi};
         (name = "auth", description = "Registration, login, token rotation, email verification, password reset"),
         (name = "users", description = "Authenticated /me endpoints"),
         (name = "admin", description = "Cookie-auth admin management API; CSRF required on state-changing requests"),
+        (name = "admin-webauthn", description = "Admin passkey registration and login-finish endpoints"),
     ),
 )]
 pub struct ApiDoc;

@@ -23,6 +23,10 @@ pub struct Config {
     pub jwt_kid: String,
     pub jwt_issuer: String,
     pub jwt_audience: String,
+    /// Optional JSON array of `{kid, public_key_pem}` for verify-only keys
+    /// kept around during a zero-downtime kid rotation. Empty in normal ops.
+    #[serde(default)]
+    pub jwt_previous_public_keys: Option<String>,
     #[serde(with = "humantime_serde")]
     pub access_token_ttl: Duration,
     #[serde(with = "humantime_serde")]
@@ -50,6 +54,22 @@ pub struct Config {
 
     pub migrate_on_start: bool,
     pub log_format: LogFormat,
+
+    /// WebAuthn relying-party id — usually the bare host (e.g. "admin.example.com").
+    /// Cookies and credentials are scoped to this domain. Required when admin
+    /// 2FA is enabled; if any admin has registered credentials, login will
+    /// require the WebAuthn step.
+    pub webauthn_rp_id: String,
+    /// WebAuthn relying-party origin — full URL with scheme (e.g. "https://admin.example.com").
+    /// Must match the page that performs `navigator.credentials.{create,get}`.
+    pub webauthn_rp_origin: Url,
+    /// Display name shown in the operating-system passkey UI. Defaults to "Admin Console".
+    #[serde(default = "default_webauthn_rp_name")]
+    pub webauthn_rp_name: String,
+}
+
+fn default_webauthn_rp_name() -> String {
+    "Admin Console".to_string()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -128,6 +148,17 @@ impl Config {
         }
         if !self.public_base_url.has_host() {
             anyhow::bail!("public_base_url must be absolute (include a host)");
+        }
+
+        if self.webauthn_rp_id.trim().is_empty() {
+            anyhow::bail!("APP_WEBAUTHN_RP_ID is required (e.g. \"admin.example.com\")");
+        }
+        match self.webauthn_rp_origin.scheme() {
+            "http" | "https" => {}
+            other => anyhow::bail!("webauthn_rp_origin scheme must be http or https, got {other}"),
+        }
+        if !self.webauthn_rp_origin.has_host() {
+            anyhow::bail!("webauthn_rp_origin must be absolute (include a host)");
         }
 
         // Argon2 parameter sanity bounds (RFC 9106).

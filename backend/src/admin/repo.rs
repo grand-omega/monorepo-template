@@ -71,6 +71,23 @@ pub async fn find_admin_by_email(
     Ok(row)
 }
 
+pub async fn find_admin_by_id(
+    executor: impl PgExecutor<'_>,
+    id: Uuid,
+) -> AppResult<Option<AdminUserRow>> {
+    let row = sqlx::query_as::<_, AdminUserRow>(
+        r#"SELECT id, email::text AS email, password_hash, locked_until
+           FROM users
+           WHERE id = $1
+             AND role = 'admin'
+             AND deleted_at IS NULL"#,
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await?;
+    Ok(row)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn insert_session(
     executor: impl PgExecutor<'_>,

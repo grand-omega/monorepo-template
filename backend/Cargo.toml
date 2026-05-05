@@ -58,6 +58,11 @@ zeroize = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
 base64 = "0.22"
 ed25519-dalek = { version = "2", features = ["pem", "pkcs8"] }
+# WebAuthn (admin 2FA / passwordless step). The
+# `danger-allow-state-serialisation` feature is required because the registration
+# and authentication state must be persisted across two HTTP requests (begin +
+# finish); we keep it in Redis with a 5-minute TTL.
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
 
 # serde / validation / errors
 serde = { version = "1", features = ["derive"] }

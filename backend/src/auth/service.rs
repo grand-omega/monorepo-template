@@ -451,6 +451,8 @@ pub async fn logout(state: &AppState, presented_wire: &str) -> AppResult<()> {
 
 pub async fn logout_all(state: &AppState, user_id: Uuid) -> AppResult<()> {
     repo::revoke_all_for_user(&state.db, user_id, "logout_all").await?;
+    crate::auth::revocation::revoke_user(&state.redis, user_id, state.config.access_token_ttl)
+        .await;
     events::record(
         &state.db,
         EventKind::LogoutAll,
@@ -559,6 +561,8 @@ pub async fn confirm_password_reset(
     users_repo::update_password(&mut *tx, user_id, &new_hash).await?;
     repo::revoke_all_for_user(&mut *tx, user_id, "password_reset").await?;
     tx.commit().await?;
+    crate::auth::revocation::revoke_user(&state.redis, user_id, state.config.access_token_ttl)
+        .await;
     events::record(
         &state.db,
         EventKind::PasswordResetCompleted,

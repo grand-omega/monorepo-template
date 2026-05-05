@@ -30,6 +30,8 @@ pub enum EventKind {
     AdminUserUnlocked,
     AdminEmailVerified,
     AdminSessionsRevoked,
+    AdminWebauthnRegistered,
+    AdminWebauthnRemoved,
 }
 
 impl EventKind {
@@ -55,6 +57,8 @@ impl EventKind {
             EventKind::AdminUserUnlocked => "admin_user_unlocked",
             EventKind::AdminEmailVerified => "admin_email_verified",
             EventKind::AdminSessionsRevoked => "admin_sessions_revoked",
+            EventKind::AdminWebauthnRegistered => "admin_webauthn_registered",
+            EventKind::AdminWebauthnRemoved => "admin_webauthn_removed",
         }
     }
 }
