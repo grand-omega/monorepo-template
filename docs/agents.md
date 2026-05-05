@@ -11,9 +11,11 @@ to simulate a big-company process.
 
 - `founder-orchestrator`: coordinates a product-scoped feature through specialist agents until it is ready to ship.
 - `backend-rust-engineer`: Rust API, migrations, backend tests, auth/session/email/rate-limit behavior.
-- `client-app-engineer`: mobile KMP app and React admin UI behavior, API integration, navigation, secure client storage, WebAuthn browser flow.
+- `admin-web-engineer`: React/Vite admin UI behavior, admin API integration, route guards, WebAuthn browser flow, Playwright validation.
+- `mobile-app-engineer`: KMP mobile behavior, navigation, secure client storage, deep links, ADB/device validation.
+- `client-app-engineer`: cross-client coordination when admin web and mobile must stay aligned.
 
-The product engineer role is intentionally split between backend and client work. Rust/backend and KMP/React client work have different failure modes, tools, and review needs. Mobile and admin are kept together for now because both are client applications that consume the same backend contracts; split them later only if either surface becomes large enough to need a dedicated owner.
+The product engineer role is intentionally split by real failure mode. Rust/backend, admin web, and mobile have different tools and validation needs. When a feature touches both admin web and mobile, use separate admin and mobile implementation phases, with `client-app-engineer` only for cross-client consistency.
 
 ## Review And Release
 
@@ -32,7 +34,9 @@ The product engineer role is intentionally split between backend and client work
 
 - Product-scoped feature that needs multiple surfaces: start with `founder-orchestrator` after `product-manager` has cut scope.
 - Backend code change: start with `backend-rust-engineer`; use `security-reviewer` for auth/session/admin/token changes.
-- Client behavior/API/state change: start with `client-app-engineer`.
+- Admin web behavior/API/state change: start with `admin-web-engineer`.
+- Mobile behavior/API/state change: start with `mobile-app-engineer`.
+- Admin and mobile both changed: use separate `admin-web-engineer` and `mobile-app-engineer` phases; use `client-app-engineer` only for shared contract/consistency planning.
 - UX, layout, copy, accessibility, or visual-state change: use `frontend-designer`.
 - CI, Docker, deploy, release: use `devops-release-engineer`.
 - Test gap or release confidence question: use `qa-test-strategist`.
@@ -54,12 +58,14 @@ For complex work, ask for a plan-first handoff:
 
 ```text
 Use founder-orchestrator. Have each specialist produce a short plan before
-implementation, resolve conflicts, then execute phase by phase.
+implementation, resolve conflicts, ask me for approval, then execute phase by
+phase.
 ```
 
 ## Practical Gates
 
 - Backend local gate: `just backend-check`
-- Admin local gate: `just admin-check`
+- Admin local gate: `just admin-check`; use Playwright for browser workflow changes.
 - Mobile unit gate: `just mobile-test`
+- Mobile device gate: use `adb devices` and ADB validation when a device is available; check Samsung Z Fold7/foldable behavior when relevant and possible.
 - Cross-project gate: `just check`
