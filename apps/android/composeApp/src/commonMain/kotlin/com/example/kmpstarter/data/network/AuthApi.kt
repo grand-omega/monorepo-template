@@ -13,6 +13,7 @@ import com.example.kmpstarter.data.network.dto.VerifyEmailRequestDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.RedirectResponseException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -33,7 +34,10 @@ class AuthApi(private val client: HttpClient) {
             Unit
         }.recoverCatching { error ->
             when (error) {
-                is ClientRequestException, is ServerResponseException -> Unit
+                is RedirectResponseException,
+                is ClientRequestException,
+                is ServerResponseException,
+                -> Unit
                 else -> throw mapToApiError(error)
             }
         }

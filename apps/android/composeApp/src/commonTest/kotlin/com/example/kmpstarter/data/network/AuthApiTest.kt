@@ -114,6 +114,21 @@ class AuthApiTest {
     }
 
     @Test
+    fun `ping treats redirect response as reachable`() = runTest {
+        val client = mockClient { request ->
+            assertEquals("/", request.url.encodedPath)
+            respondJson(
+                status = HttpStatusCode.Found,
+                body = "",
+            )
+        }
+
+        val result = AuthApi(client).ping()
+
+        assertTrue(result.isSuccess)
+    }
+
+    @Test
     fun `refresh 401 maps to Unauthorized (not InvalidCredentials)`() = runTest {
         val client = mockClient { _ ->
             respondJson(

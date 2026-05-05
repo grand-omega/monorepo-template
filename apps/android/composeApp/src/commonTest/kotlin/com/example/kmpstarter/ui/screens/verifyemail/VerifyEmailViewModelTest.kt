@@ -58,10 +58,17 @@ class VerifyEmailViewModelTest {
             withTimeout(5.seconds) { uiState.first { !it.isVerifying && !it.isResending } }
         }
 
-    private suspend fun VerifyEmailViewModel.awaitResendDone(): VerifyEmailUiState =
+    private suspend fun VerifyEmailViewModel.awaitResendCooldown(): VerifyEmailUiState =
         withContext(Dispatchers.Default.limitedParallelism(1)) {
             withTimeout(5.seconds) {
-                uiState.first { !it.isResending && (it.resendCooldownSeconds > 0 || it.snackbar != null) }
+                uiState.first { !it.isResending && it.resendCooldownSeconds > 0 }
+            }
+        }
+
+    private suspend fun VerifyEmailViewModel.awaitResendSnackbar(): VerifyEmailUiState =
+        withContext(Dispatchers.Default.limitedParallelism(1)) {
+            withTimeout(5.seconds) {
+                uiState.first { !it.isResending && it.snackbar != null }
             }
         }
 
@@ -155,7 +162,7 @@ class VerifyEmailViewModelTest {
         vm.applyArgs(email = "u@example.com", prefilledToken = null)
 
         vm.onResend()
-        vm.awaitResendDone()
+        vm.awaitResendCooldown()
 
         assertTrue(vm.uiState.value.resendCooldownSeconds > 0)
         advanceTimeBy(60.seconds)
@@ -170,7 +177,7 @@ class VerifyEmailViewModelTest {
         vm.applyArgs(email = "u@example.com", prefilledToken = null)
 
         vm.onResend()
-        vm.awaitResendDone()
+        vm.awaitResendSnackbar()
 
         assertEquals("Already sent. Try again in a minute.", vm.uiState.value.snackbar)
     }
