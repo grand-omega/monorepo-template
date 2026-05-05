@@ -1,0 +1,39 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Build / cache
+.eslintcache
+.tsbuildinfo
+*.tsbuildinfo
+.vite
+.turbo
+
+# Tests
+playwright-report
+test-results
+blob-report
+.nyc_output
+
+# Codegen — generated; snapshot is checked in
+openapi.json
+src/api/schema.ts
+src/routeTree.gen.ts
+
+# Env
+.env
+.env.local
+.env.*.local
