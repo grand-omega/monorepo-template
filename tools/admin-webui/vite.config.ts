@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
@@ -32,10 +32,16 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ["react", "react-dom"],
-          router: ["@tanstack/react-router"],
-          query: ["@tanstack/react-query"],
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "react";
+          }
+          if (id.includes("node_modules/@tanstack/react-router")) {
+            return "router";
+          }
+          if (id.includes("node_modules/@tanstack/react-query")) {
+            return "query";
+          }
         },
       },
     },
