@@ -22,9 +22,9 @@ ENV SQLX_OFFLINE=true
 RUN cargo build --release --bin lab-rust-server
 RUN strip target/release/lab-rust-server
 
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tini libssl3 \
+    && apt-get install -y --no-install-recommends ca-certificates tini libssl3t64 \
     && rm -rf /var/lib/apt/lists/*
 RUN useradd -r -u 10001 -g nogroup app
 WORKDIR /app
