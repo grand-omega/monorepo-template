@@ -1,0 +1,47 @@
+# Gradle
+.gradle/
+build/
+!**/src/**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+.gradletasknamecache
+
+# Android
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+output.json
+.cxx/
+
+# Kotlin / KMP
+.kotlin/
+.konan/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.fleet/
+.vscode/
+.DS_Store
+
+# Compose hot reload
+**/.compose/
+
+# iOS
+iosApp/build/
+iosApp/Pods/
+iosApp/.swiftpm/
+xcuserdata/
+DerivedData/
+
+# Logs and tmp
+*.log
+*.tmp
+*.bak
+hs_err_pid*

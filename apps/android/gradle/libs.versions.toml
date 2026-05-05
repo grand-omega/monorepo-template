@@ -1,0 +1,94 @@
+[versions]
+# Build
+agp = "8.11.1"
+kotlin = "2.2.20"
+composeMultiplatform = "1.10.3"
+
+# Android
+androidCompileSdk = "36"
+androidMinSdk = "24"
+androidTargetSdk = "36"
+
+# AndroidX (KMP variants under org.jetbrains.androidx.*)
+androidxActivityCompose = "1.10.1"
+androidxCoreSplashscreen = "1.0.1"
+androidxSecurityCrypto = "1.1.0-alpha07"
+googleMaterial = "1.12.0"
+androidxLifecycle = "2.9.4"
+androidxNavigation = "2.9.2"
+
+# Networking + serialization
+ktor = "3.4.3"
+kotlinxSerialization = "1.9.0"
+kotlinxCoroutines = "1.10.2"
+kotlinxDatetime = "0.7.1"
+
+# DI
+koin = "4.1.1"
+
+# Storage
+multiplatformSettings = "1.3.0"
+
+# Logging
+kermit = "2.0.6"
+
+# Test
+turbine = "1.2.1"
+
+[libraries]
+# AndroidX (Android-only)
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidxActivityCompose" }
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "androidxCoreSplashscreen" }
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "androidxSecurityCrypto" }
+google-material = { group = "com.google.android.material", name = "material", version.ref = "googleMaterial" }
+
+# Lifecycle / ViewModel (KMP via JetBrains)
+jetbrains-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidxLifecycle" }
+jetbrains-lifecycle-viewmodel-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
+jetbrains-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
+
+# Navigation (KMP via JetBrains)
+jetbrains-navigation-compose = { group = "org.jetbrains.androidx.navigation", name = "navigation-compose", version.ref = "androidxNavigation" }
+
+# Ktor client
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktor" }
+ktor-client-auth = { group = "io.ktor", name = "ktor-client-auth", version.ref = "ktor" }
+ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { group = "io.ktor", name = "ktor-client-mock", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktor" }
+
+# Kotlinx
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
+
+# Koin
+koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+koin-compose = { group = "io.insert-koin", name = "koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { group = "io.insert-koin", name = "koin-compose-viewmodel", version.ref = "koin" }
+koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koin" }
+koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koin" }
+
+# Storage
+multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }
+multiplatform-settings-coroutines = { group = "com.russhwolf", name = "multiplatform-settings-coroutines", version.ref = "multiplatformSettings" }
+multiplatform-settings-test = { group = "com.russhwolf", name = "multiplatform-settings-test", version.ref = "multiplatformSettings" }
+
+# Logging
+kermit = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
+
+# Test
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
