@@ -15,7 +15,16 @@ On Android, `localhost` means the phone itself. If your server is running on you
 - use ADB reverse over USB, or
 - configure the app to use your computer's LAN IP.
 
-For day-to-day local development, ADB reverse is the simplest option.
+For day-to-day local development, use the helper script. It rebuilds the app,
+restores ADB reverse, reinstalls the APK, and launches the app:
+
+```bash
+apps/mobile/scripts/dev-phone.sh
+```
+
+ADB reverse can disappear after unplugging the phone, restarting ADB, rebooting
+the phone, or reconnecting the device, so rerun this script whenever the login
+screen unexpectedly says `Server offline`.
 
 ## USB Workflow
 
@@ -35,7 +44,15 @@ curl -i http://localhost:8080/v1/auth/login
 
 Expected result: `405 Method Not Allowed`, because login is a `POST` endpoint.
 
-Connect the phone and confirm ADB sees it:
+Connect the phone and run:
+
+```bash
+apps/mobile/scripts/dev-phone.sh
+```
+
+The manual commands below are useful when debugging the connection.
+
+Confirm ADB sees the phone:
 
 ```bash
 adb devices
@@ -59,7 +76,7 @@ Expected output includes:
 UsbFfs tcp:8080 tcp:8080
 ```
 
-Build, install, and launch:
+Build, install, and launch manually:
 
 ```bash
 JAVA_HOME=/opt/android-studio/jbr ./gradlew :composeApp:installDebug
@@ -107,4 +124,3 @@ buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.15:8080\"")
 4. Rebuild and reinstall the app.
 
 Use this only on a trusted local network. For production, use HTTPS and a real domain.
-

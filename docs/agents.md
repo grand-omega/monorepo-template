@@ -9,6 +9,7 @@ to simulate a big-company process.
 
 ## Product Engineering
 
+- `founder-orchestrator`: coordinates a product-scoped feature through specialist agents until it is ready to ship.
 - `backend-rust-engineer`: Rust API, migrations, backend tests, auth/session/email/rate-limit behavior.
 - `client-app-engineer`: mobile KMP app and React admin UI behavior, API integration, navigation, secure client storage, WebAuthn browser flow.
 
@@ -29,6 +30,7 @@ The product engineer role is intentionally split between backend and client work
 
 ## Default Routing
 
+- Product-scoped feature that needs multiple surfaces: start with `founder-orchestrator` after `product-manager` has cut scope.
 - Backend code change: start with `backend-rust-engineer`; use `security-reviewer` for auth/session/admin/token changes.
 - Client behavior/API/state change: start with `client-app-engineer`.
 - UX, layout, copy, accessibility, or visual-state change: use `frontend-designer`.
@@ -36,6 +38,24 @@ The product engineer role is intentionally split between backend and client work
 - Test gap or release confidence question: use `qa-test-strategist`.
 - Repo communication or GitHub process: use `github-maintainer`.
 - Ambiguous product idea: use `product-manager` first.
+
+## Codex Usage
+
+These files are Claude Code agent definitions, but Codex can still use them as
+repo-local role instructions. In Codex, explicitly name the agent and ask it to
+read the matching file before acting:
+
+```text
+Use founder-orchestrator. Read .claude/agents/founder-orchestrator.md, then
+drive this PM plan end-to-end on the current branch.
+```
+
+For complex work, ask for a plan-first handoff:
+
+```text
+Use founder-orchestrator. Have each specialist produce a short plan before
+implementation, resolve conflicts, then execute phase by phase.
+```
 
 ## Practical Gates
 

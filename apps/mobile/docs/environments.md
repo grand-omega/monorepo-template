@@ -69,6 +69,9 @@ Then build/install specific variants:
 
 For local/staging servers, prefer seeded test accounts over real user accounts:
 
+- Local verified user:
+  - Email: `mobile.user@example.test`
+  - Password: `password1234`
 - `verified@example.com`
 - `unverified@example.com`
 - `locked@example.com`
