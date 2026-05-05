@@ -1,0 +1,67 @@
+set shell := ["bash", "-cu"]
+
+env_file := ".env.local"
+
+default:
+    just --list
+
+# Generate Ed25519 dev keys into .env.local.
+keys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -f "{{env_file}}" ]; then
+      echo "generating Ed25519 dev keys -> {{env_file}}"
+      openssl genpkey -algorithm Ed25519 -out /tmp/lrs_priv.pem
+      openssl pkey -in /tmp/lrs_priv.pem -pubout -out /tmp/lrs_pub.pem
+      printf 'APP_JWT_PRIVATE_KEY="%s"\nAPP_JWT_PUBLIC_KEY="%s"\n' \
+        "$(cat /tmp/lrs_priv.pem)" "$(cat /tmp/lrs_pub.pem)" > "{{env_file}}"
+      rm /tmp/lrs_priv.pem /tmp/lrs_pub.pem
+    else
+      echo "{{env_file}} already exists - skipping key generation"
+    fi
+
+# Start postgres, redis, mailhog, and the app.
+dev: keys
+    docker compose --env-file {{env_file}} up --build
+
+# Stop docker compose services.
+down:
+    docker compose down
+
+# Unit tests only; no containers required.
+test:
+    SQLX_OFFLINE=true cargo test --lib
+
+# Integration tests; requires Docker for testcontainers.
+test-integration:
+    SQLX_OFFLINE=true cargo test --tests
+
+# Unit and integration tests.
+test-all: test test-integration
+
+# Format Rust code.
+fmt:
+    cargo fmt
+
+# Lint all targets.
+clippy:
+    SQLX_OFFLINE=true cargo clippy --all-targets -- -D warnings
+
+# Fast local gate.
+check: fmt clippy test
+
+# Full local gate.
+check-all: fmt clippy test-integration
+
+# Run database migrations once and exit.
+migrate:
+    cargo run -- migrate
+
+# Run the HTTP server locally.
+serve:
+    cargo run -- serve
+
+# Remove build artifacts and generated local env.
+clean:
+    cargo clean
+    rm -f {{env_file}}

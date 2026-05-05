@@ -1,0 +1,122 @@
+[package]
+name = "lab-rust-server"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "lab-rust-server"
+path = "src/main.rs"
+
+[lib]
+name = "lab_rust_server"
+path = "src/lib.rs"
+
+[dependencies]
+# web / runtime
+axum = { version = "0.8", features = ["macros", "http2", "tracing"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = [
+    "trace",
+    "cors",
+    "compression-gzip",
+    "compression-br",
+    "timeout",
+    "limit",
+    "request-id",
+    "sensitive-headers",
+    "set-header",
+    "catch-panic",
+] }
+hyper = { version = "1", features = ["full"] }
+
+# persistence
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "macros",
+    "migrate",
+    "uuid",
+    "chrono",
+    "json",
+    "ipnetwork",
+] }
+deadpool-redis = "0.23"
+redis = { version = "1", default-features = false, features = [
+    "tokio-rustls-comp",
+    "tls-rustls",
+    "script",
+] }
+
+# auth / crypto
+argon2 = { version = "0.5", features = ["std"] }
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+rand = "0.10"
+sha2 = "0.11"
+subtle = "2"
+zeroize = { version = "1", features = ["derive"] }
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+base64 = "0.22"
+ed25519-dalek = { version = "2", features = ["pem", "pkcs8"] }
+# WebAuthn (admin 2FA / passwordless step). The
+# `danger-allow-state-serialisation` feature is required because the registration
+# and authentication state must be persisted across two HTTP requests (begin +
+# finish); we keep it in Redis with a 5-minute TTL.
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+
+# serde / validation / errors
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+validator = { version = "0.20", features = ["derive"] }
+thiserror = "2"
+anyhow = "1"
+
+# observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.18", default-features = false, features = ["http-listener"] }
+
+# email
+lettre = { version = "0.11", default-features = false, features = [
+    "tokio1-rustls-tls",
+    "smtp-transport",
+    "builder",
+    "hostname",
+] }
+tera = "1"
+
+# config
+figment = { version = "0.10", features = ["env", "toml"] }
+
+# openapi
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+# misc
+chrono = { version = "0.4", features = ["serde"] }
+http = "1"
+url = { version = "2", features = ["serde"] }
+async-trait = "0.1"
+ipnetwork = "0.20"  # pinned to match sqlx 0.8.6's internal version (bump together when sqlx 0.9 stabilizes)
+clap = { version = "4", features = ["derive", "env"] }
+futures-util = "0.3"
+humantime-serde = "1"
+mime = "0.3"
+pin-project-lite = "0.2"
+
+[dev-dependencies]
+testcontainers = "0.27"
+testcontainers-modules = { version = "0.15", features = ["postgres", "redis"] }
+reqwest = { version = "0.13", default-features = false, features = [
+    "json",
+    "rustls",
+    "cookies",
+] }
+http-body-util = "0.1"
+serial_test = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
