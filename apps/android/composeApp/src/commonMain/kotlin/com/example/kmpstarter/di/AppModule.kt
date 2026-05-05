@@ -7,7 +7,12 @@ import com.example.kmpstarter.data.network.UserApi
 import com.example.kmpstarter.data.network.buildHttpClient
 import com.example.kmpstarter.data.user.UserRepository
 import com.example.kmpstarter.ui.screens.login.LoginViewModel
+import com.example.kmpstarter.ui.screens.forgotpassword.ForgotPasswordViewModel
+import com.example.kmpstarter.ui.screens.home.HomeViewModel
+import com.example.kmpstarter.ui.screens.profile.ProfileViewModel
 import com.example.kmpstarter.ui.screens.register.RegisterViewModel
+import com.example.kmpstarter.ui.screens.resetpassword.ResetPasswordViewModel
+import com.example.kmpstarter.ui.screens.verifyemail.VerifyEmailViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
@@ -38,4 +43,9 @@ val appModule = module {
 
     viewModelOf(::LoginViewModel)
     viewModelOf(::RegisterViewModel)
+    viewModelOf(::VerifyEmailViewModel)
+    viewModelOf(::ForgotPasswordViewModel)
+    viewModelOf(::ResetPasswordViewModel)
+    viewModelOf(::HomeViewModel)
+    viewModelOf(::ProfileViewModel)
 }
