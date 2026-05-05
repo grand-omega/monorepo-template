@@ -15,13 +15,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -30,9 +30,6 @@ import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VerifyEmailViewModelTest {
-
-    @BeforeTest fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
     private fun viewModelWith(
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
@@ -44,7 +41,11 @@ class VerifyEmailViewModelTest {
 
     private fun runVmTest(body: suspend TestScope.() -> Unit) = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-        body()
+        try {
+            body()
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 
     private suspend fun VerifyEmailViewModel.awaitVerifyDone(): VerifyEmailUiState =
@@ -157,6 +158,8 @@ class VerifyEmailViewModelTest {
         vm.awaitResendDone()
 
         assertTrue(vm.uiState.value.resendCooldownSeconds > 0)
+        advanceTimeBy(60.seconds)
+        runCurrent()
     }
 
     @Test

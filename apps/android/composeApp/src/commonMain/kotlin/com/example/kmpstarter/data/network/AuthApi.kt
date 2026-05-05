@@ -12,11 +12,31 @@ import com.example.kmpstarter.data.network.dto.TokenPairDto
 import com.example.kmpstarter.data.network.dto.VerifyEmailRequestDto
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.ServerResponseException
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 
 /** Wraps the public auth endpoints under /v1/auth. Failures are [com.example.kmpstarter.domain.ApiError]. */
 class AuthApi(private val client: HttpClient) {
+
+    /**
+     * Lightweight reachability probe for the configured API host.
+     *
+     * Any HTTP response means the server is reachable; transport failures
+     * (connection refused, timeout, DNS) mean it is offline from the app.
+     */
+    suspend fun ping(): Result<Unit> =
+        runCatching {
+            client.get("/")
+            Unit
+        }.recoverCatching { error ->
+            when (error) {
+                is ClientRequestException, is ServerResponseException -> Unit
+                else -> throw mapToApiError(error)
+            }
+        }
 
     suspend fun register(email: String, password: String, displayName: String?): Result<AcceptedResponseDto> =
         runCatching {

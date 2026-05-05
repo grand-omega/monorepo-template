@@ -1,5 +1,6 @@
 package com.example.kmpstarter.ui.screens.login
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,6 +50,10 @@ fun LoginScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshServerStatus()
+    }
 
     LaunchedEffect(state.snackbar) {
         val msg = state.snackbar ?: return@LaunchedEffect
@@ -98,6 +105,9 @@ fun LoginContent(
                 text = "Sign in to continue.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ServerStatusIndicator(
+                status = state.serverStatus,
             )
 
             Spacer(Modifier.height(8.dp))
@@ -166,5 +176,38 @@ fun LoginContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ServerStatusIndicator(
+    status: ServerStatus,
+) {
+    val color = when (status) {
+        ServerStatus.Online -> Color(0xFF2E7D32)
+        ServerStatus.Offline -> MaterialTheme.colorScheme.error
+        ServerStatus.Checking -> MaterialTheme.colorScheme.tertiary
+        ServerStatus.Unknown -> MaterialTheme.colorScheme.outline
+    }
+    val label = when (status) {
+        ServerStatus.Online -> "Server online"
+        ServerStatus.Offline -> "Server offline"
+        ServerStatus.Checking -> "Checking server"
+        ServerStatus.Unknown -> "Server status unknown"
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Canvas(Modifier.size(10.dp)) {
+            drawCircle(color)
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

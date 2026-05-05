@@ -16,9 +16,17 @@ data class LoginUiState(
     val password: String = "",
     val emailError: String? = null,
     val passwordError: String? = null,
+    val serverStatus: ServerStatus = ServerStatus.Unknown,
     val isLoading: Boolean = false,
     val snackbar: String? = null,
 )
+
+enum class ServerStatus {
+    Unknown,
+    Checking,
+    Online,
+    Offline,
+}
 
 class LoginViewModel(
     private val authRepository: AuthRepository,
@@ -37,6 +45,18 @@ class LoginViewModel(
 
     fun consumeSnackbar() {
         _uiState.update { it.copy(snackbar = null) }
+    }
+
+    fun refreshServerStatus() {
+        if (_uiState.value.serverStatus == ServerStatus.Checking) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(serverStatus = ServerStatus.Checking) }
+            val reachable = authRepository.checkServerReachable()
+            _uiState.update {
+                it.copy(serverStatus = if (reachable) ServerStatus.Online else ServerStatus.Offline)
+            }
+        }
     }
 
     fun onSubmit() {

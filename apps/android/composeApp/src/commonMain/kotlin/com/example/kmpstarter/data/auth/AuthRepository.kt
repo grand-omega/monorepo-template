@@ -59,6 +59,9 @@ class AuthRepository(
     suspend fun register(email: String, password: String, displayName: String?): Result<Unit> =
         authApi.register(email, password, displayName).map { }
 
+    suspend fun checkServerReachable(): Boolean =
+        authApi.ping().isSuccess
+
     suspend fun login(email: String, password: String): Result<User> =
         authApi.login(email, password).map { pair ->
             applyTokenPair(pair)
