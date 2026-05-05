@@ -15,6 +15,32 @@ ops/                     Deployment and runtime glue
 .claude/agents/          Project-level agent instructions
 ```
 
+## Architecture
+
+![Monorepo architecture diagram](docs/images/architecture-diagram.svg)
+
+```mermaid
+flowchart TD
+  Mobile[apps/mobile<br/>Kotlin Multiplatform client] -->|/v1/*| Backend[backend<br/>Rust API server]
+  AdminDev[apps/admin<br/>React admin SPA] -->|/admin/api/*| Backend
+  AdminBuild[admin dist<br/>built into backend image] -->|served at /admin/*| Backend
+
+  Backend -->|publishes| OpenAPI[/openapi.json/]
+  OpenAPI -->|snapshot/codegen| AdminDev
+  Contracts[contracts/<br/>shared API notes] -.-> OpenAPI
+
+  Backend -->|SQL| Postgres[(Postgres)]
+  Backend -->|rate limits, sessions, jobs| Redis[(Redis)]
+  Backend -->|dev SMTP| MailHog[MailHog]
+
+  subgraph Compose[docker-compose local stack]
+    Backend
+    Postgres
+    Redis
+    MailHog
+  end
+```
+
 ## Local Development
 
 The root `justfile` is the main entrypoint:
@@ -28,6 +54,9 @@ just mobile-test
 ```
 
 The imported subprojects keep their own README files for stack-specific details.
+
+Project-level agent roles are documented in `docs/agents.md` and implemented as
+instructions under `.claude/agents/`.
 
 ## Artifact Ownership
 

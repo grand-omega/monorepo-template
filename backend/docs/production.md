@@ -10,12 +10,12 @@ Run these before promoting an image:
 
 ```sh
 just check
-just test-integration
+cargo nextest run
 ```
 
 CI runs the backend checks in the root `.github/workflows/backend-ci.yml`.
-Integration tests require Docker because they use real Postgres and Redis
-through testcontainers.
+The full nextest run includes integration tests, which require Docker because
+they use real Postgres and Redis through testcontainers.
 
 ## Configuration
 
@@ -31,8 +31,9 @@ Required production decisions:
 - `APP_TRUSTED_PROXY_CIDRS` must match only the load balancer or ingress CIDRs.
 - `APP_METRICS_BIND_ADDR` should be reachable only from the metrics network.
 - `APP_ALLOW_NOOP_MAILER=false` is enforced in `prod`.
-- `APP_PUBLIC_BASE_URL` must be the public HTTPS API base URL used in
-  verification and password-reset emails.
+- `APP_PUBLIC_BASE_URL` must be the public HTTPS base URL used in verification
+  and password-reset emails. Auth tokens are placed in URL fragments so they
+  are not sent to backend, proxy, or ingress request logs.
 - `APP_ADMIN_UI_DIR` should point at the built admin SPA directory when the
   backend should serve `/admin/*`. The production Docker image copies it to
   `/app/admin-dist`.

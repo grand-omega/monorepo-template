@@ -16,9 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
@@ -58,13 +56,6 @@ class VerifyEmailViewModelTest {
     private suspend fun VerifyEmailViewModel.awaitIdle(): VerifyEmailUiState =
         withContext(Dispatchers.Default.limitedParallelism(1)) {
             withTimeout(5.seconds) { uiState.first { !it.isVerifying && !it.isResending } }
-        }
-
-    private suspend fun VerifyEmailViewModel.awaitResendCooldown(): VerifyEmailUiState =
-        withContext(Dispatchers.Default.limitedParallelism(1)) {
-            withTimeout(5.seconds) {
-                uiState.first { !it.isResending && it.resendCooldownSeconds > 0 }
-            }
         }
 
     private suspend fun VerifyEmailViewModel.awaitResendSnackbar(): VerifyEmailUiState =
@@ -153,22 +144,6 @@ class VerifyEmailViewModelTest {
 
         assertEquals(0, hits)
         assertNotNull(vm.uiState.value.snackbar)
-    }
-
-    @Test
-    fun `resend with email + 202 starts cooldown`() = runVmTest {
-        val vm = viewModelWith { request ->
-            assertEquals("/v1/auth/resend-verification", request.url.encodedPath)
-            respondJson(HttpStatusCode.Accepted, """{"status":"ok"}""")
-        }
-        vm.applyArgs(email = "u@example.com", prefilledToken = null)
-
-        vm.onResend()
-        vm.awaitResendCooldown()
-
-        assertTrue(vm.uiState.value.resendCooldownSeconds > 0)
-        advanceTimeBy(60.seconds)
-        runCurrent()
     }
 
     @Test

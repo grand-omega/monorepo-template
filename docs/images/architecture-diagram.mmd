@@ -1,0 +1,19 @@
+flowchart TD
+  Mobile[apps/mobile<br/>Kotlin Multiplatform client] -->|/v1/*| Backend[backend<br/>Rust API server]
+  AdminDev[apps/admin<br/>React admin SPA] -->|/admin/api/*| Backend
+  AdminBuild[admin dist<br/>built into backend image] -->|served at /admin/*| Backend
+
+  Backend -->|publishes| OpenAPI[/openapi.json/]
+  OpenAPI -->|snapshot/codegen| AdminDev
+  Contracts[contracts/<br/>shared API notes] -.-> OpenAPI
+
+  Backend -->|SQL| Postgres[(Postgres)]
+  Backend -->|rate limits, sessions, jobs| Redis[(Redis)]
+  Backend -->|dev SMTP| MailHog[MailHog]
+
+  subgraph Compose[docker-compose local stack]
+    Backend
+    Postgres
+    Redis
+    MailHog
+  end

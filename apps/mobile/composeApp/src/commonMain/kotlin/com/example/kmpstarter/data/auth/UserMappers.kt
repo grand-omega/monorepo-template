@@ -8,5 +8,6 @@ internal fun UserSummaryDto.toUser(): User =
         id = id,
         email = email,
         displayName = displayName,
+        avatarUrl = avatarUrl,
         emailVerified = emailVerified,
     )

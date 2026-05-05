@@ -189,3 +189,52 @@ async fn login_branches_to_webauthn_required_when_credentials_exist() {
         assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 }
+
+#[tokio::test]
+async fn cannot_delete_final_admin_passkey() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let email = "admin-final-key@example.test";
+    register_and_promote(&client, &app, email).await;
+    let auth = admin_login(&client, &app, email).await;
+
+    let admin_id: (uuid::Uuid,) = sqlx::query_as("SELECT id FROM users WHERE email = $1::citext")
+        .bind(email)
+        .fetch_one(&app.db)
+        .await
+        .unwrap();
+    let credential_id = uuid::Uuid::now_v7();
+    sqlx::query(
+        r#"INSERT INTO webauthn_credentials
+                (id, admin_user_id, credential_id, passkey, label)
+           VALUES ($1, $2, $3, $4::jsonb, $5)"#,
+    )
+    .bind(credential_id)
+    .bind(admin_id.0)
+    .bind(b"\x05\x06\x07\x08".as_slice())
+    .bind(serde_json::json!({ "placeholder": true }))
+    .bind("only key")
+    .execute(&app.db)
+    .await
+    .unwrap();
+
+    let resp = client
+        .delete(format!(
+            "{}/admin/api/webauthn/credentials/{}",
+            app.base_url, credential_id
+        ))
+        .header(reqwest::header::COOKIE, &auth.cookie)
+        .header("x-csrf-token", &auth.csrf)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+    let remaining: (i64,) =
+        sqlx::query_as("SELECT count(*) FROM webauthn_credentials WHERE admin_user_id = $1")
+            .bind(admin_id.0)
+            .fetch_one(&app.db)
+            .await
+            .unwrap();
+    assert_eq!(remaining.0, 1);
+}

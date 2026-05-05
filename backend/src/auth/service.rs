@@ -100,7 +100,7 @@ fn build_verification_link(
         base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, secret),
     );
     let url = format!(
-        "{base}verify?token={token}",
+        "{base}verify#token={token}",
         base = ensure_trailing_slash(state.config.public_base_url.as_str()),
         token = token_str
     );
@@ -121,7 +121,7 @@ fn build_reset_link(state: &AppState) -> (String, Uuid, Vec<u8>) {
         base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, secret),
     );
     let url = format!(
-        "{base}reset?token={token}",
+        "{base}reset#token={token}",
         base = ensure_trailing_slash(state.config.public_base_url.as_str()),
         token = token_str
     );
@@ -282,6 +282,7 @@ pub async fn login(
             email: user.email,
             email_verified: user.email_verified,
             display_name: user.display_name,
+            avatar_url: None,
         },
     })
 }
@@ -436,6 +437,7 @@ pub async fn refresh_token(
             email: user.email,
             email_verified: user.email_verified,
             display_name: user.display_name,
+            avatar_url: None,
         },
     })
 }

@@ -39,11 +39,16 @@ async fn login(client: &reqwest::Client, base: &str, email: &str, password: &str
 
 fn token_from_url(url: &str) -> String {
     let parsed = Url::parse(url).expect("parse url");
-    parsed
+    let token_params = parsed
+        .fragment()
+        .expect("token fragment present")
+        .trim_start_matches('?');
+    Url::parse(&format!("https://token.invalid/?{token_params}"))
+        .expect("parse token fragment")
         .query_pairs()
         .find(|(k, _)| k == "token")
         .map(|(_, v)| v.into_owned())
-        .expect("token query param present")
+        .expect("token fragment param present")
 }
 
 // ----------------------------------------------------------------- email verify
@@ -87,7 +92,44 @@ async fn email_verification_happy_path() {
         .await
         .unwrap();
     assert_eq!(me.status(), StatusCode::OK);
-    assert_eq!(me.json::<Value>().await.unwrap()["email_verified"], true);
+    let body = me.json::<Value>().await.unwrap();
+    assert_eq!(body["email_verified"], true);
+    assert!(body["avatar_url"].is_null());
+}
+
+#[tokio::test]
+async fn sent_auth_email_bodies_are_scrubbed_from_outbox() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let email = "scrubbed-outbox@example.test";
+
+    register(&client, &app.base_url, email).await;
+    let url = app
+        .mailer
+        .last_url_to(email, "verify")
+        .expect("verify URL captured");
+    let token = token_from_url(&url);
+
+    let row: (String, String, String, String) = sqlx::query_as(
+        r#"SELECT email_kind, status, html_body, text_body
+           FROM email_outbox
+           WHERE recipient = $1::citext
+           ORDER BY created_at DESC
+           LIMIT 1"#,
+    )
+    .bind(email)
+    .fetch_one(&app.db)
+    .await
+    .unwrap();
+
+    assert_eq!(row.0, "email_verification");
+    assert_eq!(row.1, "sent");
+    assert!(row.2.is_empty(), "sent html body was not scrubbed");
+    assert!(row.3.is_empty(), "sent text body was not scrubbed");
+    assert!(
+        !row.2.contains(&token) && !row.3.contains(&token),
+        "sent outbox row retained the auth token"
+    );
 }
 
 #[tokio::test]
@@ -356,6 +398,7 @@ async fn patch_me_updates_display_name() {
     assert_eq!(r.status(), StatusCode::OK);
     let body: Value = r.json().await.unwrap();
     assert_eq!(body["display_name"], "Alice Liddell");
+    assert!(body["avatar_url"].is_null());
 }
 
 #[tokio::test]

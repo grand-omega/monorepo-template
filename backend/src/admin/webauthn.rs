@@ -268,6 +268,7 @@ pub async fn list_credentials(
         (status = 200, description = "Credential removed"),
         (status = 401, description = "No active admin session", body = ErrorBody),
         (status = 403, description = "CSRF token missing or invalid", body = ErrorBody),
+        (status = 409, description = "Cannot remove final admin passkey", body = ErrorBody),
         (status = 404, description = "Credential not found", body = ErrorBody),
     ),
 )]
@@ -276,15 +277,35 @@ pub async fn delete_credential(
     admin: AdminUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
+    let mut tx = state.db.begin().await?;
+
+    let rows: Vec<(Uuid,)> = sqlx::query_as(
+        r#"SELECT id
+           FROM webauthn_credentials
+           WHERE admin_user_id = $1
+           FOR UPDATE"#,
+    )
+    .bind(admin.user_id)
+    .fetch_all(&mut *tx)
+    .await?;
+    if !rows.iter().any(|row| row.0 == id) {
+        return Err(AppError::NotFound);
+    }
+    if rows.len() <= 1 {
+        return Err(AppError::Conflict("cannot delete final admin passkey"));
+    }
+
     let n = sqlx::query("DELETE FROM webauthn_credentials WHERE id = $1 AND admin_user_id = $2")
         .bind(id)
         .bind(admin.user_id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await?
         .rows_affected();
     if n == 0 {
         return Err(AppError::NotFound);
     }
+    tx.commit().await?;
+
     events::record(
         &state.db,
         EventKind::AdminWebauthnRemoved,

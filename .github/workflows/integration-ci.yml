@@ -10,6 +10,9 @@ on:
       - "docker-compose.yml"
       - ".github/workflows/integration-ci.yml"
 
+permissions:
+  contents: read
+
 jobs:
   integration:
     runs-on: ubuntu-latest

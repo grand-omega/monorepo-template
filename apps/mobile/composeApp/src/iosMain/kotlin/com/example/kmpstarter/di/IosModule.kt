@@ -2,17 +2,14 @@ package com.example.kmpstarter.di
 
 import com.example.kmpstarter.data.auth.SettingsTokenStorage
 import com.example.kmpstarter.data.auth.TokenStorage
-import com.russhwolf.settings.NSUserDefaultsSettings
+import com.russhwolf.settings.ExperimentalSettingsImplementation
+import com.russhwolf.settings.KeychainSettings
 import org.koin.dsl.module
-import platform.Foundation.NSUserDefaults
 
-private const val DEFAULTS_SUITE_NAME = "kmpstarter_secure_prefs"
+private const val KEYCHAIN_SERVICE_NAME = "com.example.kmpstarter.auth"
 
 @Suppress("unused")
+@OptIn(ExperimentalSettingsImplementation::class)
 val iosModule = module {
-    // TODO: swap NSUserDefaults for a Keychain-backed Settings before shipping iOS.
-    single<TokenStorage> {
-        val defaults = NSUserDefaults(suiteName = DEFAULTS_SUITE_NAME)
-        SettingsTokenStorage(NSUserDefaultsSettings(defaults))
-    }
+    single<TokenStorage> { SettingsTokenStorage(KeychainSettings(KEYCHAIN_SERVICE_NAME)) }
 }

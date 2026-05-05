@@ -99,6 +99,7 @@ pub async fn change_password(
             email: user.email,
             email_verified: user.email_verified,
             display_name: user.display_name,
+            avatar_url: None,
         },
     })
 }

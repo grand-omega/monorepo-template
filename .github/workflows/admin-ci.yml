@@ -13,6 +13,9 @@ on:
       - "contracts/**"
       - ".github/workflows/admin-ci.yml"
 
+permissions:
+  contents: read
+
 jobs:
   admin:
     runs-on: ubuntu-latest

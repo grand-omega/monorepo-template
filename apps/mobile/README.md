@@ -5,8 +5,8 @@ Kotlin Multiplatform auth client for Android first, with shared Compose UI and s
 ## Features
 
 - Register, login, logout, logout-all
-- Email verification with pasted token and `kmpstarter://verify?token=...` deep link
-- Forgot/reset password with pasted token and `kmpstarter://reset?token=...` deep link
+- Email verification with pasted token and `kmpstarter://verify#token=...` deep link
+- Forgot/reset password with pasted token and `kmpstarter://reset#token=...` deep link
 - Home screen with current user state and unverified-email banner
 - Profile screen for display name, password change, and account deletion
 - Login server-status indicator for API reachability
@@ -55,13 +55,13 @@ For the full real-device workflow, see [docs/real-device-server.md](docs/real-de
 Email verification:
 
 ```bash
-adb shell am start -a android.intent.action.VIEW -d "kmpstarter://verify?token=YOUR_TOKEN"
+adb shell am start -a android.intent.action.VIEW -d "kmpstarter://verify#token=YOUR_TOKEN"
 ```
 
 Password reset:
 
 ```bash
-adb shell am start -a android.intent.action.VIEW -d "kmpstarter://reset?token=YOUR_TOKEN"
+adb shell am start -a android.intent.action.VIEW -d "kmpstarter://reset#token=YOUR_TOKEN"
 ```
 
 ## Manual Smoke Test
