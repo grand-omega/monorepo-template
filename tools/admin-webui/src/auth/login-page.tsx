@@ -37,7 +37,14 @@ export function LoginPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.me });
-      await navigate({ to: safeRedirect(search.redirect) });
+      if (safeRedirect(search.redirect) === "/auth-events") {
+        await navigate({
+          to: "/auth-events",
+          search: { cursor: undefined, event_type: undefined, limit: 100, user_id: undefined },
+        });
+        return;
+      }
+      await navigate({ to: "/users", search: { q: undefined, cursor: undefined, limit: 50 } });
     },
     onError: (error) => {
       form.setError("root", {
