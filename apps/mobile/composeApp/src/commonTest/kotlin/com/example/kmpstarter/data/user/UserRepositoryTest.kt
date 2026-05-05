@@ -24,16 +24,16 @@ class UserRepositoryTest {
 
     private val tokenPairJson = """
         {"access_token":"ax","refresh_token":"rx","token_type":"Bearer","access_expires_in":900,
-         "user":{"id":"u-1","email":"u@example.com","display_name":null,"email_verified":true}}
+         "user":{"id":"u-1","email":"u@example.com","display_name":null,"avatar_url":null,"email_verified":true}}
     """.trimIndent()
 
     private val updatedUserJson = """
-        {"id":"u-1","email":"u@example.com","display_name":"Bob","email_verified":true}
+        {"id":"u-1","email":"u@example.com","display_name":"Bob","avatar_url":"https://cdn.example.com/u-1.png","email_verified":true}
     """.trimIndent()
 
     private val rotatedTokenPairJson = """
         {"access_token":"ax2","refresh_token":"rx2","token_type":"Bearer","access_expires_in":900,
-         "user":{"id":"u-1","email":"u@example.com","display_name":null,"email_verified":true}}
+         "user":{"id":"u-1","email":"u@example.com","display_name":null,"avatar_url":null,"email_verified":true}}
     """.trimIndent()
 
     private suspend fun setup(
@@ -65,8 +65,10 @@ class UserRepositoryTest {
         val user = result.getOrThrow()
 
         assertEquals("Bob", user.displayName)
+        assertEquals("https://cdn.example.com/u-1.png", user.avatarUrl)
         val state = assertIs<AuthState.Authenticated>(authRepo.state.value)
         assertEquals("Bob", state.user.displayName)
+        assertEquals("https://cdn.example.com/u-1.png", state.user.avatarUrl)
     }
 
     @Test

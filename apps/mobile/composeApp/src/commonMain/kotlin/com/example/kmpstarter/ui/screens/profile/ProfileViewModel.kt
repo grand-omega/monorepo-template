@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.kmpstarter.data.auth.AuthRepository
 import com.example.kmpstarter.data.user.UserRepository
 import com.example.kmpstarter.domain.ApiError
-import com.example.kmpstarter.domain.User
 import com.example.kmpstarter.domain.Validators
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,15 +13,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
-    val displayName: String = "",
     val currentPassword: String = "",
     val newPassword: String = "",
     val deletePassword: String = "",
-    val displayNameError: String? = null,
     val currentPasswordError: String? = null,
     val newPasswordError: String? = null,
     val deletePasswordError: String? = null,
-    val savingProfile: Boolean = false,
     val changingPassword: Boolean = false,
     val loggingOut: Boolean = false,
     val deleting: Boolean = false,
@@ -35,18 +31,6 @@ class ProfileViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
-
-    private var initialized = false
-
-    fun applyUser(user: User) {
-        if (initialized) return
-        initialized = true
-        _uiState.update { it.copy(displayName = user.displayName.orEmpty()) }
-    }
-
-    fun onDisplayNameChange(value: String) {
-        _uiState.update { it.copy(displayName = value, displayNameError = null) }
-    }
 
     fun onCurrentPasswordChange(value: String) {
         _uiState.update { it.copy(currentPassword = value, currentPasswordError = null) }
@@ -62,26 +46,6 @@ class ProfileViewModel(
 
     fun consumeSnackbar() {
         _uiState.update { it.copy(snackbar = null) }
-    }
-
-    fun saveProfile() {
-        val state = _uiState.value
-        val error = Validators.displayNameError(state.displayName)
-        if (error != null) {
-            _uiState.update { it.copy(displayNameError = error) }
-            return
-        }
-        viewModelScope.launch {
-            _uiState.update { it.copy(savingProfile = true, snackbar = null) }
-            val displayName = state.displayName.trim().ifBlank { null }
-            userRepository.updateDisplayName(displayName).fold(
-                onSuccess = { _uiState.update { it.copy(savingProfile = false, snackbar = "Profile updated") } },
-                onFailure = { error ->
-                    _uiState.update { it.copy(savingProfile = false) }
-                    handleProfileError(error)
-                },
-            )
-        }
     }
 
     fun changePassword() {
@@ -136,17 +100,6 @@ class ProfileViewModel(
                     handleDeleteError(error)
                 },
             )
-        }
-    }
-
-    private fun handleProfileError(error: Throwable) {
-        when (error) {
-            is ApiError.Validation -> {
-                val displayNameErr = error.fields["display_name"]?.let { Validators.apiFieldErrorMessage("display_name", it) }
-                _uiState.update { it.copy(displayNameError = displayNameErr, snackbar = if (displayNameErr == null) error.message else null) }
-            }
-            is ApiError.Network -> _uiState.update { it.copy(snackbar = "Connection error. Check your network.") }
-            else -> _uiState.update { it.copy(snackbar = error.message ?: "Something went wrong.") }
         }
     }
 

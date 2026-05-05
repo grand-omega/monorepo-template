@@ -61,6 +61,7 @@ async fn happy_path_register_login_me() {
         StatusCode::ACCEPTED
     );
     let pair = login(&client, &app.base_url, "alice@example.test").await;
+    assert!(pair["user"]["avatar_url"].is_null());
     let access = pair["access_token"].as_str().unwrap();
 
     let me = client
@@ -73,6 +74,7 @@ async fn happy_path_register_login_me() {
     let body: Value = me.json().await.unwrap();
     assert_eq!(body["email"], "alice@example.test");
     assert_eq!(body["email_verified"], false);
+    assert!(body["avatar_url"].is_null());
 }
 
 #[tokio::test]

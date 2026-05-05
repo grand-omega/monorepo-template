@@ -17,10 +17,11 @@ class AuthApiTest {
           "refresh_token": "rx",
           "token_type": "Bearer",
           "access_expires_in": 900,
-          "user": {
+            "user": {
             "id": "u-1",
             "email": "u@example.com",
             "display_name": null,
+            "avatar_url": "https://cdn.example.com/u-1.png",
             "email_verified": false
           }
         }
@@ -38,6 +39,7 @@ class AuthApiTest {
         val pair = result.getOrThrow()
         assertEquals("ax", pair.accessToken)
         assertEquals("u-1", pair.user.id)
+        assertEquals("https://cdn.example.com/u-1.png", pair.user.avatarUrl)
     }
 
     @Test

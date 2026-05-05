@@ -15,7 +15,7 @@ import kotlin.test.assertIs
 class UserApiTest {
 
     private val userJson = """
-        {"id":"u-1","email":"u@example.com","display_name":"Alice","email_verified":true}
+        {"id":"u-1","email":"u@example.com","display_name":"Alice","avatar_url":"https://cdn.example.com/u-1.png","email_verified":true}
     """.trimIndent()
 
     private fun authedClient(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData) =
@@ -37,6 +37,7 @@ class UserApiTest {
 
         val u = UserApi(client).getMe().getOrThrow()
         assertEquals("Alice", u.displayName)
+        assertEquals("https://cdn.example.com/u-1.png", u.avatarUrl)
         assertEquals("Bearer ax", authHeader)
     }
 
