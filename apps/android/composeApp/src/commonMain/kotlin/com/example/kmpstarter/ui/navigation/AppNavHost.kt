@@ -13,6 +13,7 @@ import androidx.navigation.toRoute
 import com.example.kmpstarter.domain.User
 import com.example.kmpstarter.ui.screens.PlaceholderScreen
 import com.example.kmpstarter.ui.screens.login.LoginScreen
+import com.example.kmpstarter.ui.screens.register.RegisterScreen
 
 /** Auth (signed-out) graph. */
 @Composable
@@ -49,7 +50,14 @@ fun AuthNavHost(
             )
         }
         composable<AuthRoute.Register> {
-            PlaceholderScreen(title = "Create account", body = "Register screen.")
+            RegisterScreen(
+                onRegistered = { email ->
+                    navController.navigate(AuthRoute.VerifyEmail(email = email)) {
+                        popUpTo(AuthRoute.Login) { inclusive = false }
+                    }
+                },
+                onBackToLogin = { navController.popBackStack() },
+            )
         }
         composable<AuthRoute.VerifyEmail> { entry ->
             val args = entry.toRoute<AuthRoute.VerifyEmail>()

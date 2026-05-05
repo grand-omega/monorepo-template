@@ -7,6 +7,7 @@ import com.example.kmpstarter.data.network.UserApi
 import com.example.kmpstarter.data.network.buildHttpClient
 import com.example.kmpstarter.data.user.UserRepository
 import com.example.kmpstarter.ui.screens.login.LoginViewModel
+import com.example.kmpstarter.ui.screens.register.RegisterViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
@@ -36,4 +37,5 @@ val appModule = module {
     single { UserRepository(get(), get()) }
 
     viewModelOf(::LoginViewModel)
+    viewModelOf(::RegisterViewModel)
 }
