@@ -1,6 +1,8 @@
 import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { api } from "@/api/client";
+import { useToast } from "@/components/toast";
 import { meQueryOptions } from "@/api/queries";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 
@@ -28,6 +30,63 @@ function AuthenticatedLayout() {
   const { session } = Route.useRouteContext();
   const { queryClient } = Route.useRouteContext();
   const navigate = Route.useNavigate();
+  const toast = useToast();
+  const awaitingShortcut = useRef(false);
+
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) return false;
+      return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (event.key === "Escape" && isTypingTarget(event.target)) {
+        (event.target as HTMLElement).blur();
+        return;
+      }
+
+      if (event.key === "/" && !isTypingTarget(event.target)) {
+        const input = document.querySelector<HTMLInputElement>("[data-search-input='true']");
+        if (input) {
+          event.preventDefault();
+          input.focus();
+          input.select();
+        }
+        return;
+      }
+
+      if (isTypingTarget(event.target)) return;
+
+      if (event.key === "g") {
+        awaitingShortcut.current = true;
+        window.setTimeout(() => {
+          awaitingShortcut.current = false;
+        }, 1000);
+        return;
+      }
+
+      if (!awaitingShortcut.current) return;
+      awaitingShortcut.current = false;
+
+      if (event.key === "u") {
+        event.preventDefault();
+        void navigate({ to: "/users", search: { q: undefined, cursor: undefined, limit: 50 } });
+      }
+
+      if (event.key === "e") {
+        event.preventDefault();
+        void navigate({
+          to: "/auth-events",
+          search: { cursor: undefined, event_type: undefined, limit: 100, user_id: undefined },
+        });
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigate]);
 
   const logout = useMutation({
     mutationFn: async () => {
@@ -37,6 +96,9 @@ function AuthenticatedLayout() {
     onSuccess: async () => {
       queryClient.clear();
       await navigate({ to: "/login", search: { redirect: undefined } });
+    },
+    onError: (error) => {
+      toast.notify(apiErrorMessage(error));
     },
   });
 

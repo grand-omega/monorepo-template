@@ -61,6 +61,7 @@ export function UsersListPage() {
           <input
             className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900 sm:w-72"
             id="users-search"
+            data-search-input="true"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by email"
             value={query}

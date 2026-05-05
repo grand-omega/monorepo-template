@@ -39,6 +39,7 @@ test.describe("with admin credentials", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("status")).toContainText(/request [0-9a-f-]+/);
     await expect(page).toHaveURL(/\/admin\/login$/);
   });
 });

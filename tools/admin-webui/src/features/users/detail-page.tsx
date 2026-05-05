@@ -7,6 +7,7 @@ import type { components } from "@/api/schema";
 import { queryKeys } from "@/api/queries";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Time } from "@/components/time";
+import { useToast } from "@/components/toast";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 import { formatOptionalDateTime, formatRole } from "@/lib/format";
 import { Route } from "@/routes/_authenticated/users.$id";
@@ -116,6 +117,7 @@ function Field({
 
 function UserActions({ user }: { user: ManagedUser }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [dialog, setDialog] = useState<"lock" | "unlock" | "verify" | "revoke" | null>(null);
   const [reason, setReason] = useState("");
 
@@ -146,6 +148,7 @@ function UserActions({ user }: { user: ManagedUser }) {
     },
     onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(userKey(), context.previous);
+      toast.notify(apiErrorMessage(_error));
     },
     onSettled: async () => {
       setDialog(null);
@@ -186,6 +189,9 @@ function UserActions({ user }: { user: ManagedUser }) {
       if (error) throw new ApiError(error, response);
     },
     onSettled: () => setDialog(null),
+    onError: (error) => {
+      toast.notify(apiErrorMessage(error));
+    },
   });
 
   const pending = lock.isPending || unlock.isPending || verify.isPending || revoke.isPending;
@@ -291,6 +297,7 @@ function useOptimisticUserAction(
   onSettled?: () => void
 ) {
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   return useMutation({
     mutationFn,
@@ -302,8 +309,9 @@ function useOptimisticUserAction(
       );
       return { previous };
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(queryKeys.user(user.id), context.previous);
+      toast.notify(apiErrorMessage(error));
     },
     onSettled: async () => {
       onSettled?.();

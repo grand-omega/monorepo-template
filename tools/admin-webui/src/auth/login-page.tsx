@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { api } from "@/api/client";
 import { queryKeys } from "@/api/queries";
+import { useToast } from "@/components/toast";
 import { queryClient } from "@/router";
 import { ApiError, apiErrorMessage } from "@/lib/errors";
 
@@ -21,6 +22,7 @@ interface LoginSearch {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const search = useSearch({ from: "/login" }) as LoginSearch;
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -47,6 +49,7 @@ export function LoginPage() {
       await navigate({ to: "/users", search: { q: undefined, cursor: undefined, limit: 50 } });
     },
     onError: (error) => {
+      toast.notify(apiErrorMessage(error));
       form.setError("root", {
         message: apiErrorMessage(error),
       });
@@ -67,6 +70,7 @@ export function LoginPage() {
             <input
               autoComplete="email"
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              data-search-input="true"
               type="email"
               {...form.register("email")}
             />
