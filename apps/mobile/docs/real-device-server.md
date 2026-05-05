@@ -15,7 +15,27 @@ On Android, `localhost` means the phone itself. If your server is running on you
 - use ADB reverse over USB, or
 - configure the app to use your computer's LAN IP.
 
-For day-to-day local development, ADB reverse is the simplest option.
+For day-to-day local development, the debug app points at the development
+machine's LAN IP:
+
+```text
+http://192.168.1.15:8080
+```
+
+The helper script rebuilds the app, reinstalls the APK, and launches it:
+
+```bash
+apps/mobile/scripts/dev-phone.sh
+```
+
+If your computer's LAN IP changes, rebuild with an override:
+
+```bash
+DEV_API_BASE_URL=http://YOUR_PC_IP:8080 apps/mobile/scripts/dev-phone.sh
+```
+
+Use ADB reverse only as a fallback when the phone and development machine cannot
+be placed on the same LAN.
 
 ## USB Workflow
 
@@ -35,7 +55,16 @@ curl -i http://localhost:8080/v1/auth/login
 
 Expected result: `405 Method Not Allowed`, because login is a `POST` endpoint.
 
-Connect the phone and confirm ADB sees it:
+Connect the phone and run:
+
+```bash
+apps/mobile/scripts/dev-phone.sh
+```
+
+The manual ADB reverse commands below are useful only when debugging the old
+localhost-over-USB connection.
+
+Confirm ADB sees the phone:
 
 ```bash
 adb devices
@@ -59,7 +88,7 @@ Expected output includes:
 UsbFfs tcp:8080 tcp:8080
 ```
 
-Build, install, and launch:
+Build, install, and launch manually:
 
 ```bash
 JAVA_HOME=/opt/android-studio/jbr ./gradlew :composeApp:installDebug
@@ -107,4 +136,3 @@ buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.15:8080\"")
 4. Rebuild and reinstall the app.
 
 Use this only on a trusted local network. For production, use HTTPS and a real domain.
-

@@ -92,7 +92,9 @@ async fn email_verification_happy_path() {
         .await
         .unwrap();
     assert_eq!(me.status(), StatusCode::OK);
-    assert_eq!(me.json::<Value>().await.unwrap()["email_verified"], true);
+    let body = me.json::<Value>().await.unwrap();
+    assert_eq!(body["email_verified"], true);
+    assert!(body["avatar_url"].is_null());
 }
 
 #[tokio::test]
@@ -396,6 +398,7 @@ async fn patch_me_updates_display_name() {
     assert_eq!(r.status(), StatusCode::OK);
     let body: Value = r.json().await.unwrap();
     assert_eq!(body["display_name"], "Alice Liddell");
+    assert!(body["avatar_url"].is_null());
 }
 
 #[tokio::test]

@@ -74,6 +74,7 @@ pub struct UserSummary {
     pub email: String,
     pub email_verified: bool,
     pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

@@ -282,6 +282,7 @@ pub async fn login(
             email: user.email,
             email_verified: user.email_verified,
             display_name: user.display_name,
+            avatar_url: None,
         },
     })
 }
@@ -436,6 +437,7 @@ pub async fn refresh_token(
             email: user.email,
             email_verified: user.email_verified,
             display_name: user.display_name,
+            avatar_url: None,
         },
     })
 }

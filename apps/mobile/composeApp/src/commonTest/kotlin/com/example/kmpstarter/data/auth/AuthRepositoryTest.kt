@@ -21,12 +21,12 @@ class AuthRepositoryTest {
 
     private val tokenPairJson = """
         {"access_token":"ax","refresh_token":"rx","token_type":"Bearer","access_expires_in":900,
-         "user":{"id":"u-1","email":"u@example.com","display_name":null,"email_verified":false}}
+         "user":{"id":"u-1","email":"u@example.com","display_name":null,"avatar_url":"https://cdn.example.com/u-1.png","email_verified":false}}
     """.trimIndent()
 
     private val rotatedTokenPairJson = """
         {"access_token":"ax2","refresh_token":"rx2","token_type":"Bearer","access_expires_in":900,
-         "user":{"id":"u-1","email":"u@example.com","display_name":null,"email_verified":false}}
+         "user":{"id":"u-1","email":"u@example.com","display_name":null,"avatar_url":null,"email_verified":false}}
     """.trimIndent()
 
     private fun authApi(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData): AuthApi =
@@ -59,6 +59,7 @@ class AuthRepositoryTest {
             repo.bootstrap()
             val authed = assertIs<AuthState.Authenticated>(awaitItem())
             assertEquals("u@example.com", authed.user.email)
+            assertEquals("https://cdn.example.com/u-1.png", authed.user.avatarUrl)
             cancelAndIgnoreRemainingEvents()
         }
 

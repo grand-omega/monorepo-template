@@ -74,6 +74,7 @@ pub async fn get_me(State(state): State<AppState>, user: AuthUser) -> AppResult<
         email: row.email,
         email_verified: row.email_verified,
         display_name: row.display_name,
+        avatar_url: None,
     }))
 }
 
@@ -106,6 +107,7 @@ pub async fn patch_me(
         email: row.email,
         email_verified: row.email_verified,
         display_name: row.display_name,
+        avatar_url: None,
     }))
 }
 
