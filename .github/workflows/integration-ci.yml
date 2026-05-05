@@ -1,0 +1,18 @@
+name: Integration CI
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "apps/android/**"
+      - "tools/admin-webui/**"
+      - "contracts/**"
+      - "docker-compose.yml"
+      - ".github/workflows/integration-ci.yml"
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Integration smoke test placeholder: wire backend/admin/API contract checks here."

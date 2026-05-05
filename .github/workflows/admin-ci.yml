@@ -1,0 +1,33 @@
+name: Admin Web UI CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "tools/admin-webui/**"
+      - "contracts/**"
+      - ".github/workflows/admin-ci.yml"
+  pull_request:
+    paths:
+      - "tools/admin-webui/**"
+      - "contracts/**"
+      - ".github/workflows/admin-ci.yml"
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/admin-webui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - run: bun install --frozen-lockfile
+      - run: bun run openapi:gen
+      - run: bun run lint
+      - run: bun run format:check
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build

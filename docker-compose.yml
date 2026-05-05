@@ -1,0 +1,4 @@
+# Root compose entrypoint delegates to the backend development stack for now.
+# Follow-up work can lift services here once admin UI serving is integrated.
+include:
+  - backend/docker-compose.yml

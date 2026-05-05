@@ -1,0 +1,32 @@
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# env/secrets
+.env
+.env.*
+!.env.example
+
+# Rust
+/target/
+backend/target/
+
+# Node/Bun
+node_modules/
+dist/
+coverage/
+.bun-install.cache
+
+# Android/Gradle
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+
+# generated/local
+*.log
+/tmp/
