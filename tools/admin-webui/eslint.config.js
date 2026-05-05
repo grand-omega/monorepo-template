@@ -15,7 +15,7 @@ export default tseslint.config(
       "test-results",
       "coverage",
       "src/api/schema.ts",
-      "src/routes/routeTree.gen.ts",
+      "src/routeTree.gen.ts",
     ],
   },
   js.configs.recommended,
