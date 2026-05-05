@@ -52,6 +52,7 @@ function AuthenticatedLayout() {
             <Link
               activeProps={{ className: "bg-zinc-900 text-white" }}
               className="rounded-md px-3 py-2 text-zinc-700 hover:bg-zinc-100"
+              search={{ q: undefined, cursor: undefined, limit: 50 }}
               to="/users"
             >
               Users

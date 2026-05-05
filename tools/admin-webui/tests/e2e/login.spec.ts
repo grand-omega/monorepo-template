@@ -24,8 +24,8 @@ test.describe("with admin credentials", () => {
     await page.getByLabel("Password").fill(adminPassword ?? "");
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    await expect(page).toHaveURL(/\/admin\/users$/);
-    await expect(page.getByText(adminEmail ?? "")).toBeVisible();
+    await expect(page).toHaveURL((url) => url.pathname === "/admin/users");
+    await expect(page.getByRole("banner").getByText(adminEmail ?? "")).toBeVisible();
 
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/admin\/login$/);
