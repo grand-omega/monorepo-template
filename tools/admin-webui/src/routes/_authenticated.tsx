@@ -1,7 +1,7 @@
 import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { LogOut, ShieldCheck, Users } from "lucide-react";
+import { KeyRound, LogOut, ShieldCheck, Users } from "lucide-react";
 import { api } from "@/api/client";
 import { useToast } from "@/components/toast";
 import { meQueryOptions } from "@/api/queries";
@@ -134,6 +134,16 @@ function AuthenticatedLayout() {
             >
               <ShieldCheck className="size-4" aria-hidden="true" />
               Auth events
+            </Link>
+            <Link
+              activeProps={{
+                className: "border-zinc-950 bg-zinc-950 text-white hover:bg-zinc-900",
+              }}
+              className={buttonClassName({ variant: "ghost" })}
+              to="/passkeys"
+            >
+              <KeyRound className="size-4" aria-hidden="true" />
+              Passkeys
             </Link>
             <Button disabled={logout.isPending} onClick={() => logout.mutate()} variant="secondary">
               <LogOut className="size-4" aria-hidden="true" />

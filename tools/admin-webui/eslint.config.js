@@ -77,5 +77,13 @@ export default tseslint.config(
       "no-console": "off",
       "no-restricted-globals": "off",
     },
+  },
+  {
+    // src/auth/webauthn.ts uses raw fetch because the WebAuthn endpoints aren't
+    // in the committed OpenAPI snapshot yet. After running `bun run openapi`
+    // against a backend that includes /admin/api/webauthn/*, migrate this file
+    // to the openapi-fetch `api` client and remove this override.
+    files: ["src/auth/webauthn.ts"],
+    rules: { "no-restricted-globals": "off" },
   }
 );

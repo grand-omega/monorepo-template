@@ -45,7 +45,6 @@ jobs:
           bun-version: 1.3.13
       - run: bun install --frozen-lockfile
       - run: bun run openapi:gen
-      - run: bunx playwright install --with-deps chromium
       # TODO(@yanwenxu, 2026-05-31): wire up docker-compose with backend image
       # for true contract-drift coverage. Skipping for scaffolding step.
       - run: echo "E2E against real backend wired up in step 5 (auth)."

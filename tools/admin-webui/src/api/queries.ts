@@ -13,6 +13,8 @@ export const meQueryOptions = queryOptions({
   queryFn: async () => {
     const { data, error, response } = await api.GET("/me");
     if (error) throw new ApiError(error, response);
+    if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+    if (!data) throw new Error("Current admin session response was empty");
     return data;
   },
 });

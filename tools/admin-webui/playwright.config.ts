@@ -11,11 +11,11 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:5173",
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [{ name: "chrome", use: { ...devices["Desktop Chrome"], channel: "chrome" } }],
   webServer: process.env.CI
     ? undefined
     : {
-        command: "npm run dev",
+        command: "bun run dev",
         url: "http://localhost:5173/admin/",
         reuseExistingServer: true,
         timeout: 60_000,

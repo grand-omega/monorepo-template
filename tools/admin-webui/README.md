@@ -44,7 +44,7 @@ The OpenAPI client is generated from the backend's `/openapi.json`. The flow:
 
 ## E2E credentials
 
-Login/logout E2E tests run against the real backend when `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are set. Without those variables, credential-backed tests are skipped while route/form tests still run.
+Login/logout E2E tests run against the real backend when `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD` are set. Without those variables, credential-backed tests are skipped while route/form tests still run. E2E runs against the installed Chrome channel.
 
 ## Stack
 
